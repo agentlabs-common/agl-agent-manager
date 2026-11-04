@@ -9,6 +9,7 @@ def emit(kind,**values):
 
 def settings():
     result={key:os.environ.get(key,'') for key in ('GEMINI_API_KEY','GOOGLE_API_KEY','GOOGLE_LIVE_MODEL','GEMINI_TRANSCRIBE_MODEL','GEMINI_LIVE_VOICE','GEMINI_TTS_MODEL','GEMINI_TTS_VOICE')}
+    if os.environ.get('CLAUDE_AGENTS_GEMINI_KEY'):result['GEMINI_API_KEY']=os.environ['CLAUDE_AGENTS_GEMINI_KEY']
     file=os.environ.get('CLAUDE_AGENTS_KEYS',os.path.expanduser('~/.config/agentlabs/keys.env'))
     try:
         for line in open(file):

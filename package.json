@@ -2,7 +2,7 @@
   "name": "claude-folder-agents",
   "displayName": "Claude Sessions & Voice",
   "description": "Native Claude sessions with exact folder scope, Gemini Live voice control, and early streamed readout.",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {
@@ -69,6 +69,12 @@
         "title": "Restart Session in YOLO Mode",
         "category": "Claude Sessions",
         "icon": "$(rocket)"
+      },
+      {
+        "command": "claudeFolderAgents.configureGemini",
+        "title": "Configure Gemini Voice",
+        "category": "Claude Sessions",
+        "icon": "$(gear)"
       }
     ],
     "views": {
@@ -95,6 +101,11 @@
           "command": "claudeFolderAgents.newYolo",
           "when": "view == claudeFolderAgents.sessions",
           "group": "navigation@3"
+        },
+        {
+          "command": "claudeFolderAgents.configureGemini",
+          "when": "view == claudeFolderAgents.sessions",
+          "group": "navigation@4"
         }
       ],
       "explorer/context": [
@@ -128,17 +139,20 @@
         "claudeFolderAgents.voicePython": {
           "type": "string",
           "default": "",
-          "description": "Python executable for voice helpers. Live conversations require websockets. Defaults to ~/.venvs/tts/bin/python for Live and python3 for TTS."
+          "description": "Python executable for voice helpers. Live conversations require websockets. Defaults to ~/.venvs/tts/bin/python for Live and python3 for TTS.",
+          "scope": "application"
         },
         "claudeFolderAgents.transcriptionModel": {
           "type": "string",
           "default": "",
-          "description": "Gemini Live transcription model. Defaults to GEMINI_TRANSCRIBE_MODEL or gemini-3.5-transcribe-live."
+          "description": "Gemini Live transcription model. Defaults to GEMINI_TRANSCRIBE_MODEL or gemini-3.5-transcribe-live.",
+          "scope": "application"
         },
         "claudeFolderAgents.liveBargeIn": {
           "type": "boolean",
           "default": false,
-          "description": "Keep the microphone active during readout. Use a headset to avoid transcribing speaker audio."
+          "description": "Keep the microphone active during readout. Use a headset to avoid transcribing speaker audio.",
+          "scope": "application"
         },
         "claudeFolderAgents.yoloMode": {
           "type": "boolean",
@@ -148,12 +162,20 @@
         "claudeFolderAgents.ttsModel": {
           "type": "string",
           "default": "",
-          "description": "Gemini text-to-speech model for reading messages. Defaults to GEMINI_TTS_MODEL or gemini-3.8-flash-tts. Separate from Gemini Live."
+          "description": "Gemini text-to-speech model for reading messages. Defaults to GEMINI_TTS_MODEL or gemini-3.8-flash-tts. Separate from Gemini Live.",
+          "scope": "application"
         },
         "claudeFolderAgents.ttsVoice": {
           "type": "string",
           "default": "",
-          "description": "Gemini TTS voice for reading messages. Defaults to GEMINI_TTS_VOICE or Aoede."
+          "description": "Gemini TTS voice for reading messages. Defaults to GEMINI_TTS_VOICE or Aoede.",
+          "scope": "application"
+        },
+        "claudeFolderAgents.ttsStyle": {
+          "type": "string",
+          "default": "",
+          "description": "Delivery style for Gemini TTS, for example warm, calm, and conversational. Applies on the next readout.",
+          "scope": "application"
         }
       }
     }

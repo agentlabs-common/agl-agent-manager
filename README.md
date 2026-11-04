@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.3.4.vsix**.
+2. Select **claude-folder-agents-0.3.5.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **Claude Sessions** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.3.4.vsix --force`
+`code --install-extension claude-folder-agents-0.3.5.vsix --force`
 
 ## Folder scope
 
@@ -78,6 +78,16 @@ Gemini TTS uses your Gemini API key from the environment or `~/.config/agentlabs
 Defaults are `gemini-3.8-flash-tts` and `Aoede`. Python 3 is sufficient for TTS.
 The extension has its own recording and player state.
 It does not use another terminal manager, its mods, its sockets, or its voice relay.
+
+## Gemini configuration
+
+Click **⚙** in the voice pane or Claude Sessions toolbar, or run **Claude Sessions: Configure Gemini Voice**.
+Choose the TTS model, one of 30 voices or a custom voice ID, speaking style, transcription model, microphone behavior, or Python executable.
+TTS changes apply on the next readout. Reconnect Live after changing its key, transcription model, or Python executable.
+
+**Set Gemini API key** saves the key in VS Code secure storage on the local computer. It takes priority over environment and keys.env values for both TTS and Live.
+The key is passed only to local voice helpers, not to the webview, command arguments, repository settings, or SSH host.
+**Remove saved API key** restores the environment or keys.env fallback.
 
 ## Gemini Live
 

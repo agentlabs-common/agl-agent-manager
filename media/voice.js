@@ -32,6 +32,7 @@ function disconnect(){live={...live,state:'disconnected',partial:''};renderLive(
 el('disconnect').addEventListener('click',disconnect);el('gemini-disconnect').addEventListener('click',disconnect);
 el('mute').addEventListener('click',()=>send('liveMute',{on:!live.muted}));
 el('live-send').addEventListener('click',()=>send('liveSend'));
+el('settings').addEventListener('click',()=>send('configureGemini'));
 el('refresh').addEventListener('click',()=>{error('');send('refresh');});
 for(const action of ['pause','resume','stop'])el(action).addEventListener('click',()=>send('speech',{action}));
 el('early').addEventListener('change',event=>send('early',{on:event.target.checked}));

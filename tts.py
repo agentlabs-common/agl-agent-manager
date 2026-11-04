@@ -4,8 +4,10 @@ import argparse,base64,json,os,subprocess,sys,time,urllib.error,urllib.request
 from pathlib import Path
 from live import settings
 
-def request_body(text,model,voice):
-    return dict(model=model,input=[dict(type='user_input',content=[dict(type='text',text=text)])],response_format=dict(type='audio',mime_type='audio/l16',sample_rate=24000),generation_config=dict(speech_config=[dict(voice=voice)]),stream=True,store=False)
+def request_body(text,model,voice,style=''):
+    content=dict(type='text',text=text)
+    if style:content['annotations']=[dict(type='speech_metadata',style=style)]
+    return dict(model=model,input=[dict(type='user_input',content=[content])],response_format=dict(type='audio',mime_type='audio/l16',sample_rate=24000),generation_config=dict(speech_config=[dict(voice=voice)]),stream=True,store=False)
 
 def events(response):
     data=[]
@@ -35,7 +37,7 @@ def main():
         if args.check:return 0
         if not args.text or not args.text.strip():raise ValueError('Enter text to read aloud.')
         model=config.get('GEMINI_TTS_MODEL') or 'gemini-3.8-flash-tts';voice=config.get('GEMINI_TTS_VOICE') or 'Aoede'
-        body=json.dumps(request_body(args.text,model,voice)).encode()
+        body=json.dumps(request_body(args.text,model,voice,os.environ.get('GEMINI_TTS_STYLE',''))).encode()
         request=urllib.request.Request('https://generativelanguage.googleapis.com/v1beta/interactions',data=body,headers={'x-goog-api-key':key,'Content-Type':'application/json','Accept':'text/event-stream'})
         state('generating · Gemini TTS')
         with urllib.request.urlopen(request,timeout=45) as response:
