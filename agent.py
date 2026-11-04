@@ -41,15 +41,15 @@ def transcript(sid):
     if not UUID.fullmatch(sid):raise ValueError('Invalid Claude session ID')
     hits=glob.glob(os.path.expanduser('~/.claude/projects/*/'+sid+'.jsonl'))
     return hits[0] if hits else None
-def early_text(text):
+def reply_text(text):
     text=re.sub(r'<view>.*?</view>','',text,flags=re.S)
-    text=re.sub(r'\x60\x60\x60.*?\x60\x60\x60','',text,flags=re.S)
+    text=VOICE.sub('',text)
+    text=re.sub(r'^\s*\x60\x60\x60[^\n]*$','',text,flags=re.M)
     text=re.sub(r'\[([^\]]+)\]\([^)]+\)',r'\1',text)
-    text=re.sub(r'https?://\S+|<[^>]+>|[\x60#*_]','',text)
-    text=' '.join(text.split())
-    sentence=re.search(r'^(.{15,}?[.!?])(?:\s|$)',text)
-    if not sentence and len(text)<80 and not re.search(r'[.!?]$',text):return ''
-    return sentence.group(1) if sentence else text[:350].rsplit(' ',1)[0] if len(text)>350 else text
+    text=re.sub(r'</?(?:voice|view)>','',text)
+    text=re.sub(r'^#{1,6}\s+','',text,flags=re.M)
+    text=text.replace('**','').replace('\x60','')
+    return ' '.join(text.split())
 
 def voices(sid,cursor=None):
     file=transcript(sid);items=[];views=[]
@@ -70,18 +70,19 @@ def voices(sid,cursor=None):
         content=e.get('message',{}).get('content',[]);ts=e.get('timestamp','')
         turn=e.get('message',{}).get('id') or e.get('requestId') or e.get('uuid') or ts
         if e.get('type')=='user' and not e.get('isMeta') and isinstance(content,str) and content.strip() and not content.lstrip().startswith('<'):
-            items.append(dict(ts=ts,text=content[:2000],you=True,id=str(turn)+':prompt'))
+            items.append(dict(ts=ts,text=content,you=True,id=str(turn)+':prompt'))
         if e.get('type')!='assistant' or not isinstance(content,list):continue
+        bodies=[];speech_bodies=[];summaries=[]
         for index,block in enumerate(content):
             if block.get('type')!='text':continue
-            text=block.get('text','');spoken=VOICE.findall(text)
-            if not spoken:
-                summary=early_text(text)
-                if summary:items.append(dict(ts=ts,text=summary,turn=turn,source='early',id=str(turn)+':early'))
-            for number,value in enumerate(spoken):
-                if value.strip():items.append(dict(ts=ts,text=' '.join(value.split()),turn=turn,source='voice',id=str(turn)+':voice:'+str(index)+':'+str(number)))
+            text=block.get('text','');spoken=VOICE.findall(text);body=reply_text(text)
+            if body:
+                bodies.append(body);speech_bodies.append(re.sub(r'<view>.*?</view>','',VOICE.sub('',text),flags=re.S))
+            summaries.extend(' '.join(value.split()) for value in spoken if value.strip())
             for value in VIEW.findall(text):
                 if value.strip():views.append(dict(ts=ts,text=value.strip(),id=str(turn)+':view:'+str(index)))
+        if bodies:items.append(dict(ts=ts,text=' '.join(bodies),speechText='\n'.join(speech_bodies),turn=turn,source='early',hasVoice=bool(summaries),id=str(turn)+':reply'))
+        elif summaries:items.append(dict(ts=ts,text=' '.join(summaries),turn=turn,source='voice',id=str(turn)+':voice'))
     return dict(session=sid,transcript=file,items=items[-200:],views=views[-30:],reset=reset,cursor=next_cursor)
 
 def tmux_target(session):

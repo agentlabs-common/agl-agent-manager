@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
 """Stream Gemini TTS over REST without opening a microphone or Live session."""
-import argparse,base64,json,os,subprocess,sys,time,urllib.error,urllib.request,urllib.parse
+import argparse,base64,json,os,re,subprocess,sys,time,urllib.error,urllib.request,urllib.parse
 from pathlib import Path
 from live import settings
+
+def speech_text(text):
+    text=re.sub(r'\x60\x60\x60.*?\x60\x60\x60',' ',text,flags=re.S)
+    text=re.sub(r'\[([^\]]+)\]\([^)]+\)',r'\1',text)
+    text=re.sub(r'\x60([^\x60]*[\\/][^\x60]*)\x60',' ',text)
+    text=re.sub(r'\b[a-zA-Z][a-zA-Z0-9+.-]*://[^\s<>]+|\bmailto:[^\s<>]+',' ',text)
+    text=re.sub(r'\b[A-Za-z]:[\\/][^\s<>]+',' ',text)
+    text=re.sub(r'(?<![\w:])(?:~|\.{1,2})?/[^\s<>]*',' ',text)
+    text=re.sub(r'\b(?!and/or\b)(?:[A-Za-z_.@-][\w.@+-]*/)+[\w.@+-]*',' ',text)
+    text=re.sub(r'\b[\w.-]+\.(?:py|js|ts|tsx|jsx|json|md|yaml|yml|sh|txt|log|vsix|html|css|toml|xml|sql)\b',' ',text,flags=re.I)
+    text=text.replace('\x60','')
+    return ' '.join(text.split())
 
 def request_body(text,model,voice,style=''):
     content=dict(type='text',text=text)
@@ -44,6 +56,9 @@ def main():
     player=None;sink=None;started=time.monotonic();total=0
     try:
         config=settings();key=config['GEMINI_API_KEY'] or config['GOOGLE_API_KEY']
+        if args.text is not None:
+            args.text=speech_text(args.text)
+            if not args.text:raise ValueError('This message contains only paths, links, or code; there is nothing to read aloud.')
         if args.check:return 0
         if args.list_voices:
             print(json.dumps(dict(voices=list_voices(key,args.language,args.gender,args.accent)),ensure_ascii=False));return 0

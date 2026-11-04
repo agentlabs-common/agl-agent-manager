@@ -16,7 +16,7 @@ function render(){
   if(!data.items?.length)container.append(node('p','empty','Spoken replies appear here when the agent writes a voice summary.'));
   data.items?.forEach((item,index)=>{
     const row=node('article',item.you?'voice-row prompt-row':'voice-row');
-    row.append(node('div','row-meta',(item.you?'YOU':item.source==='early'?'CLAUDE · EARLY REPLY':'CLAUDE')+' · '+time(item.ts)));
+    row.append(node('div','row-meta',(item.you?'YOU':item.source==='early'&&!item.hasVoice?'CLAUDE · EARLY REPLY':'CLAUDE')+' · '+time(item.ts)));
     const text=node(item.you?'p':'button',item.you?'prompt-text':'voice-text',item.text);
     if(!item.you){text.title='Read aloud with Gemini TTS';text.addEventListener('click',()=>send('speak',{index}));}
     row.append(text);container.append(row);

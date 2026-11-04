@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.3.6.vsix**.
+2. Select **claude-folder-agents-0.3.7.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **Claude Sessions** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.3.6.vsix --force`
+`code --install-extension claude-folder-agents-0.3.7.vsix --force`
 
 ## Folder scope
 
@@ -51,10 +51,14 @@ The extension verifies the folder and waits for the previous process to stop bef
 
 ## Voice
 
-The voice pane shows spoken summaries, early reply text, and your prompts.
+The voice pane shows complete published Claude replies and your prompts.
+It preserves every sentence and code text in the pane. A voice summary is used only when no reply body is available.
+Speech skips URLs, URIs, filesystem paths, filenames, and fenced code blocks. The visible reply remains complete.
 Click a reply to play it with **Gemini TTS**. Live-tab messages are clickable too.
 **Auto-speak** uses the same Gemini TTS player. Playback does not open the microphone or require a Live connection.
-**Read replies early** uses the first published reply sentence without waiting for a closing voice tag.
+Clicking a reply reads its complete current text. Automatic readout waits for ongoing playback instead of replacing it.
+**Read replies early** reads published reply text without waiting for a closing voice tag.
+It does not shorten the reply to its first sentence. As a reply grows, remaining text queues after the current audio.
 The reader follows appended transcript records every 250 ms locally and 500 ms over SSH.
 It does not rescan the complete transcript. A later voice block from the same reply is not read twice.
 **Pause** and **Resume** control playback. **Stop speech** stops playback and turns off auto-speak.
