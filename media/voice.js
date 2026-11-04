@@ -8,7 +8,7 @@ function time(value){const date=new Date(value);return Number.isNaN(date.getTime
 function error(message){el('error').textContent=message;el('error').hidden=!message;}
 function setRecording(state){recording=state==='listening';el('dictate').hidden=recording;for(const id of ['review','dictation-send','cancel'])el(id).hidden=!recording;el('dictation').hidden=!recording;el('dictate').disabled=false;}
 function render(){
-  el('name').textContent=data.name||'Claude';
+  el('name').textContent=data.name||data.agent||'Agent';
   el('connection').textContent=(data.address?.includes('/')?'Remote · ':'')+(data.address||'')+' · '+(data.speech||'idle');
   el('early').checked=data.early!==false;el('auto').checked=!!data.auto;el('auto').disabled=!data.session;
   const next=JSON.stringify({items:data.items,views:data.views});if(signature===next)return;signature=next;
@@ -16,7 +16,7 @@ function render(){
   if(!data.items?.length)container.append(node('p','empty','Spoken replies appear here when the agent writes a voice summary.'));
   data.items?.forEach((item,index)=>{
     const row=node('article',item.you?'voice-row prompt-row':'voice-row');
-    row.append(node('div','row-meta',(item.you?'YOU':item.source==='early'&&!item.hasVoice?'CLAUDE · EARLY REPLY':'CLAUDE')+' · '+time(item.ts)));
+    row.append(node('div','row-meta',(item.you?'YOU':item.source==='early'&&!item.hasVoice?(data.agent||'Claude').toUpperCase()+' · EARLY REPLY':(data.agent||'Claude').toUpperCase())+' · '+time(item.ts)));
     const text=node(item.you?'p':'button',item.you?'prompt-text':'voice-text',item.text);
     if(!item.you){text.title='Read aloud with Gemini TTS';text.addEventListener('click',()=>send('speak',{index}));}
     row.append(text);container.append(row);

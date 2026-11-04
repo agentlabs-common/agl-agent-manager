@@ -1,8 +1,8 @@
 {
   "name": "claude-folder-agents",
-  "displayName": "Claude Sessions & Voice",
-  "description": "Native Claude sessions with exact folder scope, Gemini Live voice control, and early streamed readout.",
-  "version": "0.3.7",
+  "displayName": "Agent Sessions & Voice",
+  "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
+  "version": "0.4.0",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {
@@ -31,57 +31,72 @@
       {
         "command": "claudeFolderAgents.open",
         "title": "Open Session with Voice",
-        "category": "Claude Sessions"
+        "category": "Agent Sessions"
       },
       {
         "command": "claudeFolderAgents.refresh",
-        "title": "Refresh Claude Sessions",
+        "title": "Refresh Agent Sessions",
         "icon": "$(refresh)"
       },
       {
         "command": "claudeFolderAgents.new",
-        "title": "New Claude Session",
+        "title": "New Agent Session",
         "icon": "$(add)"
       },
       {
         "command": "claudeFolderAgents.show",
-        "title": "Show Claude Sessions",
-        "category": "Claude Sessions"
+        "title": "Show Agent Sessions",
+        "category": "Agent Sessions"
       },
       {
         "command": "claudeFolderAgents.workspace",
         "title": "Show Sessions in Workspace Folders",
-        "category": "Claude Sessions"
+        "category": "Agent Sessions"
       },
       {
         "command": "claudeFolderAgents.remote",
         "title": "Open Remote Working Directory over SSH",
-        "category": "Claude Sessions"
+        "category": "Agent Sessions"
       },
       {
         "command": "claudeFolderAgents.newYolo",
-        "title": "New Claude Session (YOLO)",
-        "category": "Claude Sessions",
+        "title": "New Agent Session (YOLO)",
+        "category": "Agent Sessions",
         "icon": "$(rocket)"
       },
       {
         "command": "claudeFolderAgents.restartYolo",
         "title": "Restart Session in YOLO Mode",
-        "category": "Claude Sessions",
+        "category": "Agent Sessions",
         "icon": "$(rocket)"
       },
       {
         "command": "claudeFolderAgents.configureGemini",
         "title": "Configure Gemini Voice",
-        "category": "Claude Sessions",
+        "category": "Agent Sessions",
         "icon": "$(gear)"
+      },
+      {
+        "command": "claudeFolderAgents.newCodex",
+        "title": "New Codex Session",
+        "category": "Agent Sessions"
+      },
+      {
+        "command": "claudeFolderAgents.newCodexYolo",
+        "title": "New Codex Session (YOLO)",
+        "category": "Agent Sessions"
+      },
+      {
+        "command": "claudeFolderAgents.startCodexDaemon",
+        "title": "Start Codex Daemon",
+        "category": "Agent Sessions"
       }
     ],
     "views": {
       "explorer": [
         {
           "id": "claudeFolderAgents.sessions",
-          "name": "Claude Sessions"
+          "name": "Agent Sessions"
         }
       ]
     },
@@ -124,7 +139,7 @@
       ]
     },
     "configuration": {
-      "title": "Claude Sessions & Voice",
+      "title": "Agent Sessions & Voice",
       "properties": {
         "claudeFolderAgents.claudePath": {
           "type": "string",
@@ -134,7 +149,7 @@
         "claudeFolderAgents.showSaved": {
           "type": "boolean",
           "default": true,
-          "description": "Include completed native Claude background sessions for the current directory."
+          "description": "Include saved Claude and Codex sessions for the current directory."
         },
         "claudeFolderAgents.voicePython": {
           "type": "string",
@@ -157,7 +172,7 @@
         "claudeFolderAgents.yoloMode": {
           "type": "boolean",
           "default": false,
-          "description": "Skip all Claude permission checks for new sessions and resumed inactive interactive sessions. Running sessions retain their existing mode."
+          "description": "Use YOLO when starting or opening eligible sessions. Claude skips permission checks; Codex bypasses approvals and its sandbox. Active Codex turns must finish before changing mode."
         },
         "claudeFolderAgents.ttsModel": {
           "type": "string",
@@ -176,13 +191,35 @@
           "default": "",
           "description": "Delivery style for Gemini TTS, for example warm, calm, and conversational. Applies on the next readout.",
           "scope": "application"
+        },
+        "claudeFolderAgents.codexPath": {
+          "type": "string",
+          "default": "codex",
+          "description": "Path to the native Codex CLI. Remote SSH hosts use the same command name."
+        },
+        "claudeFolderAgents.providers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "claude",
+              "codex"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1,
+          "default": [
+            "claude",
+            "codex"
+          ],
+          "description": "Agent providers to show for the selected working directory."
         }
       }
     }
   },
   "scripts": {
     "test": "node --test",
-    "package": "npx --yes @vscode/vsce package --allow-missing-repository --no-dependencies",
+    "package": "npx --yes @vscode/vsce package",
     "test:host": "xvfb-run -a code --wait --new-window --disable-gpu --disable-extensions --disable-workspace-trust --skip-welcome --skip-release-notes --user-data-dir=/tmp/claude-agents-host-smoke/profile --extensions-dir=/tmp/claude-agents-host-smoke/extensions --extensionDevelopmentPath=. --extensionTestsPath=./scripts/vscode-smoke.cjs ."
   },
   "repository": {
@@ -192,5 +229,8 @@
   "bugs": {
     "url": "https://github.com/agentlabs-common/claude-folder-agents/issues"
   },
-  "homepage": "https://github.com/agentlabs-common/claude-folder-agents#readme"
+  "homepage": "https://github.com/agentlabs-common/claude-folder-agents#readme",
+  "dependencies": {
+    "ws": "^8.22.1"
+  }
 }
