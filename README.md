@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.3.5.vsix**.
+2. Select **claude-folder-agents-0.3.6.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **Claude Sessions** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.3.5.vsix --force`
+`code --install-extension claude-folder-agents-0.3.6.vsix --force`
 
 ## Folder scope
 
@@ -83,6 +83,12 @@ It does not use another terminal manager, its mods, its sockets, or its voice re
 
 Click **⚙** in the voice pane or Claude Sessions toolbar, or run **Claude Sessions: Configure Gemini Voice**.
 Choose the TTS model, one of 30 voices or a custom voice ID, speaking style, transcription model, microphone behavior, or Python executable.
+For Indian female voices, choose **TTS voice → Indian English · Female** or **Hindi · Female**.
+**Browse voice catalog…** offers Indian languages and gender filters. The catalog uses the voices available to your Gemini API key.
+Each result shows its name, language, accent, gender, pitch, and description. Search matches these details.
+Select a voice, then **Preview voice** to hear it or **Use this voice** to save it. **Stop preview** stops the sample.
+Preview does not change your saved voice. Catalog previews use your Gemini TTS quota.
+
 TTS changes apply on the next readout. Reconnect Live after changing its key, transcription model, or Python executable.
 
 **Set Gemini API key** saves the key in VS Code secure storage on the local computer. It takes priority over environment and keys.env values for both TTS and Live.

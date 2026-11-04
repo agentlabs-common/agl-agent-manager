@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Stream Gemini TTS over REST without opening a microphone or Live session."""
-import argparse,base64,json,os,subprocess,sys,time,urllib.error,urllib.request
+import argparse,base64,json,os,subprocess,sys,time,urllib.error,urllib.request,urllib.parse
 from pathlib import Path
 from live import settings
 
@@ -8,6 +8,16 @@ def request_body(text,model,voice,style=''):
     content=dict(type='text',text=text)
     if style:content['annotations']=[dict(type='speech_metadata',style=style)]
     return dict(model=model,input=[dict(type='user_input',content=[content])],response_format=dict(type='audio',mime_type='audio/l16',sample_rate=24000),generation_config=dict(speech_config=[dict(voice=voice)]),stream=True,store=False)
+
+def list_voices(key,language='',gender='',accent=''):
+    query={name:value for name,value in [('language_code',language),('gender',gender),('accent',accent)] if value}
+    query['page_size']=1000;voices=[];tokens=set()
+    while True:
+        request=urllib.request.Request('https://generativelanguage.googleapis.com/v1beta/voices?'+urllib.parse.urlencode(query),headers={'x-goog-api-key':key})
+        with urllib.request.urlopen(request,timeout=20) as response:page=json.load(response)
+        voices.extend(page.get('voices',[]));token=page.get('next_page_token') or page.get('nextPageToken')
+        if not token or token in tokens:return voices
+        tokens.add(token);query['page_token']=token
 
 def events(response):
     data=[]
@@ -27,7 +37,7 @@ def audio_chunk(event):
     return b''
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--check',action='store_true');parser.add_argument('--output');parser.add_argument('--state-dir');parser.add_argument('text',nargs='?');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--check',action='store_true');parser.add_argument('--list-voices',action='store_true');parser.add_argument('--language',default='');parser.add_argument('--gender',default='');parser.add_argument('--accent',default='');parser.add_argument('--output');parser.add_argument('--state-dir');parser.add_argument('text',nargs='?');args=parser.parse_args()
     state_dir=Path(args.state_dir) if args.state_dir else None
     def state(value):
         if state_dir:(state_dir/'speech.state').write_text(value)
@@ -35,6 +45,8 @@ def main():
     try:
         config=settings();key=config['GEMINI_API_KEY'] or config['GOOGLE_API_KEY']
         if args.check:return 0
+        if args.list_voices:
+            print(json.dumps(dict(voices=list_voices(key,args.language,args.gender,args.accent)),ensure_ascii=False));return 0
         if not args.text or not args.text.strip():raise ValueError('Enter text to read aloud.')
         model=config.get('GEMINI_TTS_MODEL') or 'gemini-3.8-flash-tts';voice=config.get('GEMINI_TTS_VOICE') or 'Aoede'
         body=json.dumps(request_body(args.text,model,voice,os.environ.get('GEMINI_TTS_STYLE',''))).encode()

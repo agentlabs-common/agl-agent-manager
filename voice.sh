@@ -30,6 +30,9 @@ case "$operation" in
   printf '%s' "$dir" ;;
  finish) stop_record;tr '\n' ' ' < "$dir/final.txt" ;;
  cancel) stop_record;: > "$dir/live.txt" ;;
+ voices)
+  python="${CLAUDE_AGENTS_VOICE_PYTHON:-python3}"
+  "$python" "$(dirname "$0")/tts.py" --list-voices "$@" ;;
  play)
   [ ! -f "$dir/player.pid" ] || kill -CONT -- "-$(cat "$dir/player.pid")" 2>/dev/null || true
   [ ! -f "$dir/player.pid" ] || kill -- "-$(cat "$dir/player.pid")" 2>/dev/null || true
