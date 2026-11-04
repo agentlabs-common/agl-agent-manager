@@ -1,0 +1,8 @@
+node_modules/
+*.vsix
+__pycache__/
+*.py[cod]
+preview*.png
+preview.html
+.env
+.env.*

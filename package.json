@@ -1,0 +1,174 @@
+{
+  "name": "claude-folder-agents",
+  "displayName": "Claude Sessions & Voice",
+  "description": "Native Claude sessions with exact folder scope, Gemini Live voice control, and early streamed readout.",
+  "version": "0.3.4",
+  "publisher": "local-tools",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "claudeFolderAgents.open",
+        "title": "Open Session with Voice",
+        "category": "Claude Sessions"
+      },
+      {
+        "command": "claudeFolderAgents.refresh",
+        "title": "Refresh Claude Sessions",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "claudeFolderAgents.new",
+        "title": "New Claude Session",
+        "icon": "$(add)"
+      },
+      {
+        "command": "claudeFolderAgents.show",
+        "title": "Show Claude Sessions",
+        "category": "Claude Sessions"
+      },
+      {
+        "command": "claudeFolderAgents.workspace",
+        "title": "Show Sessions in Workspace Folders",
+        "category": "Claude Sessions"
+      },
+      {
+        "command": "claudeFolderAgents.remote",
+        "title": "Open Remote Working Directory over SSH",
+        "category": "Claude Sessions"
+      },
+      {
+        "command": "claudeFolderAgents.newYolo",
+        "title": "New Claude Session (YOLO)",
+        "category": "Claude Sessions",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "claudeFolderAgents.restartYolo",
+        "title": "Restart Session in YOLO Mode",
+        "category": "Claude Sessions",
+        "icon": "$(rocket)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "claudeFolderAgents.sessions",
+          "name": "Claude Sessions"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "claudeFolderAgents.new",
+          "when": "view == claudeFolderAgents.sessions",
+          "group": "navigation@1"
+        },
+        {
+          "command": "claudeFolderAgents.refresh",
+          "when": "view == claudeFolderAgents.sessions",
+          "group": "navigation@2"
+        },
+        {
+          "command": "claudeFolderAgents.newYolo",
+          "when": "view == claudeFolderAgents.sessions",
+          "group": "navigation@3"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "claudeFolderAgents.show",
+          "when": "explorerResourceIsFolder && resourceScheme == file",
+          "group": "navigation@91"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "claudeFolderAgents.restartYolo",
+          "when": "view == claudeFolderAgents.sessions && viewItem == claudeSession",
+          "group": "claude@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Claude Sessions & Voice",
+      "properties": {
+        "claudeFolderAgents.claudePath": {
+          "type": "string",
+          "default": "claude",
+          "description": "Path to the native Claude Code CLI on this computer."
+        },
+        "claudeFolderAgents.showSaved": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include completed native Claude background sessions for the current directory."
+        },
+        "claudeFolderAgents.voicePython": {
+          "type": "string",
+          "default": "",
+          "description": "Python executable for voice helpers. Live conversations require websockets. Defaults to ~/.venvs/tts/bin/python for Live and python3 for TTS."
+        },
+        "claudeFolderAgents.transcriptionModel": {
+          "type": "string",
+          "default": "",
+          "description": "Gemini Live transcription model. Defaults to GEMINI_TRANSCRIBE_MODEL or gemini-3.5-transcribe-live."
+        },
+        "claudeFolderAgents.liveBargeIn": {
+          "type": "boolean",
+          "default": false,
+          "description": "Keep the microphone active during readout. Use a headset to avoid transcribing speaker audio."
+        },
+        "claudeFolderAgents.yoloMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip all Claude permission checks for new sessions and resumed inactive interactive sessions. Running sessions retain their existing mode."
+        },
+        "claudeFolderAgents.ttsModel": {
+          "type": "string",
+          "default": "",
+          "description": "Gemini text-to-speech model for reading messages. Defaults to GEMINI_TTS_MODEL or gemini-3.8-flash-tts. Separate from Gemini Live."
+        },
+        "claudeFolderAgents.ttsVoice": {
+          "type": "string",
+          "default": "",
+          "description": "Gemini TTS voice for reading messages. Defaults to GEMINI_TTS_VOICE or Aoede."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test",
+    "package": "npx --yes @vscode/vsce package --allow-missing-repository --no-dependencies",
+    "test:host": "xvfb-run -a code --wait --new-window --disable-gpu --disable-extensions --disable-workspace-trust --skip-welcome --skip-release-notes --user-data-dir=/tmp/claude-agents-host-smoke/profile --extensions-dir=/tmp/claude-agents-host-smoke/extensions --extensionDevelopmentPath=. --extensionTestsPath=./scripts/vscode-smoke.cjs ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agentlabs-common/claude-folder-agents.git"
+  },
+  "bugs": {
+    "url": "https://github.com/agentlabs-common/claude-folder-agents/issues"
+  },
+  "homepage": "https://github.com/agentlabs-common/claude-folder-agents#readme"
+}
