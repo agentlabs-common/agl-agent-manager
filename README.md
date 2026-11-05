@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.7.0.vsix**.
+2. Select **claude-folder-agents-0.7.1.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.7.0.vsix --force`
+`code --install-extension claude-folder-agents-0.7.1.vsix --force`
 
 ## Codex sessions
 
@@ -44,13 +44,14 @@ The microphone and Gemini key stay on the local VS Code computer. Codex history 
 
 1. Open the workspace containing the canonical repository clones.
 2. Select **+** in **AGL Agent Manager** or **AGL Workspace Sessions**.
-3. Choose Claude or Codex, a session name, and the repositories to include.
-4. The manager fetches the base branch and creates **.sessions/<agent>/<name>-<id>/** with a worktree for each repository on **<agent>/<name>-<id>**.
+3. Choose Claude or Codex and enter a session name. There is no repository picker.
+4. The manager creates **.sessions/<agent>/<name>-<id>/** without worktrees or Git fetches.
 5. It opens that folder in a new VS Code window and starts the selected native agent and voice pane there.
+6. The agent chooses repositories from the task and uses the bundled **.agl/workspace.cjs** helper to add their worktrees on demand.
 
-The default base is **main**, using **origin/main** when origin exists. Set **Workspace Base Branch** for another branch. Canonical clones must be clean and on that branch; their working trees are not switched, edited or built by this operation. The repository chooser replaces the hardcoded EB repository list. Failed creation attempts rollback, including worktrees registered before a checkout-hook failure; retained paths are reported.
+The default base is **main**, using **origin/main** when origin exists. Set **Workspace Base Branch** for another branch. When adding a worktree, its canonical clone must be clean and on that branch; canonical working trees are not switched, edited or built. The helper discovers repositories dynamically. Adding a worktree fetches the configured base branch and updates the session manifest. Failed additions roll back only newly created worktrees and preserve existing edits; retained paths are reported.
 
-Each new session contains **.agl-session.json**, **AGENTS.md**, and **CLAUDE.md** with the branch and worktree paths. The manifest records native conversation IDs after launch for later resume. Existing .sessions/<agent>/<folder> directories are recognized even without a manifest. Worktree metadata is discovered from their canonical clones; no skill or manual migration is needed.
+Each new session contains **.agl-session.json**, **AGENTS.md**, **CLAUDE.md**, and the portable **.agl/workspace.cjs** helper. The instructions tell the agent how to discover repositories and run **add <session-root> <repo-name> [repo-name...]** with the recorded Node runtime. The manifest starts with an empty repository list and records worktrees as the agent adds them. The manifest records native conversation IDs after launch for later resume. Existing .sessions/<agent>/<folder> directories are recognized even without a manifest. Worktree metadata is discovered from their canonical clones; no skill or manual migration is needed.
 
 **Working directory and history are separate.** A new agent starts in the specific session folder. Its conversation history stays in the native agent data directory on the machine running it, rather than being copied into the workspace folder. Existing agents are not moved, stopped, or deleted. The agent list excludes agents outside .sessions, including those started directly in the canonical workspace. Closed histories remain visible while their workspace folder still exists.
 
@@ -62,6 +63,7 @@ The workspace and skill engines use Node APIs and Git argument arrays, without B
 
 ## Skills GUI
 
+Select the **Manage Skills** book icon in the main manager toolbar, or run **AGL Agent Manager: Manage Skills**.
 **AGL Skills** manages folder-based skills separately from workspace isolation. It groups workspace and personal sources for Claude, Codex/shared AGENTS skills, and legacy Codex locations on the selected local or SSH host.
 
 - **New Skill** creates a SKILL.md from a name and description and opens it for editing.

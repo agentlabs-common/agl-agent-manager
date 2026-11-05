@@ -2,7 +2,7 @@
   "name": "claude-folder-agents",
   "displayName": "AGL Agent Manager",
   "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {
@@ -194,6 +194,12 @@
         "title": "Disable Skill",
         "category": "AGL Agent Manager",
         "icon": "$(eye-closed)"
+      },
+      {
+        "command": "claudeFolderAgents.manageSkills",
+        "title": "Manage Skills",
+        "category": "AGL Agent Manager",
+        "icon": "$(book)"
       }
     ],
     "views": {
@@ -258,6 +264,11 @@
           "command": "claudeFolderAgents.refreshSkills",
           "when": "view == claudeFolderAgents.skills",
           "group": "navigation@3"
+        },
+        {
+          "command": "claudeFolderAgents.manageSkills",
+          "when": "view == claudeFolderAgents.sessions",
+          "group": "navigation@5"
         }
       ],
       "explorer/context": [
