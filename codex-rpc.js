@@ -1,4 +1,4 @@
-const{spawn}=require('node:child_process');const{Duplex}=require('node:stream');const{EventEmitter}=require('node:events');const WebSocket=require('ws');const{userEnvironment,quote}=require('./backend');
+const{spawn}=require('node:child_process');const{Agent}=require('node:http');const{Duplex}=require('node:stream');const{EventEmitter}=require('node:events');const WebSocket=require('ws');const{userEnvironment,quote}=require('./backend');
 class CodexRpc extends EventEmitter{
  constructor({scope,codex='codex',spawn:spawnProcess=spawn,WebSocket:Socket=WebSocket}={}){super();this.scope=scope;this.codex=codex;this.spawn=spawnProcess;this.Socket=Socket;this.pending=new Map();this.nextId=0;}
  async connect(){if(this.connecting)return this.connecting;this.connecting=this.open().catch(error=>{this.close();throw error;});return this.connecting;}
@@ -7,15 +7,16 @@ class CodexRpc extends EventEmitter{
   const child=this.spawn(remote?'ssh':command[0],remote?['-T','-o','BatchMode=yes','-o','ConnectTimeout=8','--',remote,'export PATH="$HOME/.local/bin:$PATH"; exec '+command.map(quote).join(' ')]:command.slice(1),{env:userEnvironment(),stdio:['pipe','pipe','pipe']});this.child=child;let stderr='';
   child.stderr.setEncoding('utf8');child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});child.stdin.on('error',error=>this.fail(error));child.once('error',error=>this.fail(error));
   const stream=Duplex.from({readable:child.stdout,writable:child.stdin});for(const method of ['setTimeout','setNoDelay','setKeepAlive'])stream[method]=()=>stream;
-  const socket=new this.Socket('ws://localhost/',{createConnection:()=>stream,handshakeTimeout:10000,maxPayload:32*1024*1024});this.socket=socket;
+  const agent=new Agent({keepAlive:false});agent.createConnection=()=>stream;this.agent=agent;
+  const socket=new this.Socket('ws://localhost/',{agent,createConnection:()=>stream,handshakeTimeout:10000,maxPayload:32*1024*1024});this.socket=socket;
   socket.on('message',raw=>{let message;try{message=JSON.parse(raw.toString());}catch{return;}if(message.id!==undefined&&this.pending.has(message.id)){const pending=this.pending.get(message.id);this.pending.delete(message.id);clearTimeout(pending.timer);if(message.error){const error=new Error(message.error.message||'Codex request failed');error.code=message.error.code;pending.reject(error);}else pending.resolve(message.result);}else if(message.method&&message.id===undefined)this.emit('notification',message);else if(message.method&&message.id!==undefined)this.emit('serverRequest',message);});
-  socket.on('error',error=>this.fail(error));socket.once('close',()=>{if(this.socket!==socket)return;this.socket=undefined;this.connecting=undefined;this.fail(new Error(stderr.trim()||'Codex daemon connection closed. Start it with codex app-server daemon start.'));this.emit('disconnected');if(this.child===child){this.child=undefined;child.kill();}});
+  socket.on('error',error=>this.fail(error));socket.once('close',()=>{if(this.socket!==socket)return;this.socket=undefined;this.connecting=undefined;this.fail(new Error(stderr.trim()||'Codex daemon connection closed. Start it with codex app-server daemon start.'));this.emit('disconnected');if(this.child===child){this.child=undefined;child.kill();}if(this.agent===agent){this.agent=undefined;agent.destroy();}});
   await new Promise((resolve,reject)=>{socket.once('open',resolve);socket.once('error',reject);child.once('error',reject);child.once('exit',()=>{if(socket.readyState!==1)reject(new Error(stderr.trim()||'Codex daemon is unavailable. Run codex app-server daemon start.'));});});
   await this.request('initialize',{clientInfo:{name:'agentlabs_sessions_voice',title:'Agent Sessions & Voice',version:'0.4.0'},capabilities:{experimentalApi:true}});this.write({method:'initialized'});
  }
  write(message){if(this.socket?.readyState!==1)throw new Error('Codex daemon is not connected.');this.socket.send(JSON.stringify(message));}
  request(method,params={}){const id=++this.nextId;return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{this.pending.delete(id);reject(new Error('Codex request timed out: '+method));},20000);timer.unref?.();this.pending.set(id,{resolve,reject,timer});try{this.write({id,method,params});}catch(error){clearTimeout(timer);this.pending.delete(id);reject(error);}});}
  fail(error){for(const pending of this.pending.values()){clearTimeout(pending.timer);pending.reject(error);}this.pending.clear();}
- close(){const child=this.child,socket=this.socket;this.child=undefined;this.socket=undefined;this.connecting=undefined;this.fail(new Error('Codex connection closed.'));socket?.terminate();if(child){child.stdin.end();child.kill();}this.emit('disconnected');}
+ close(){const child=this.child,socket=this.socket,agent=this.agent;this.agent=undefined;this.child=undefined;this.socket=undefined;this.connecting=undefined;this.fail(new Error('Codex connection closed.'));socket?.terminate();agent?.destroy();if(child){child.stdin.end();child.kill();}this.emit('disconnected');}
 }
 module.exports={CodexRpc};
