@@ -19,16 +19,35 @@ class VoicePanel{
 }
 async function stopAll(){await Promise.all([...panels].map(panel=>panel.close()));}
 function html(source,nonce,style,script) {
+const paths={
+ settings:'<path d="m9 3-1 3-3 1-2 3 2 2v3l3 2 1 3h4l1-3 3-2v-3l2-2-2-3-3-1-1-3Z"/><circle cx="11" cy="11.5" r="3"/>',
+ refresh:'<path d="M20 11a8 8 0 1 0-2.3 6M20 4v7h-7"/>',
+ connect:'<path d="M9 3v5m6-5v5M7 8h10v3a5 5 0 0 1-10 0Zm5 8v5"/>',
+ disconnect:'<path d="M9 3v3m6-3v3M7 8h10v3a5 5 0 0 1-5 5v5M3 3l18 18"/>',
+ mic:'<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2m-7 9v3m-4 0h8"/>',
+ 'mic-off':'<path d="m3 3 18 18M9 9v3a3 3 0 0 0 5 2M9 5V4a3 3 0 0 1 6 0v7M5 10v2a7 7 0 0 0 12 5m2-5v-2m-7 9v3m-4 0h8"/>',
+ finish:'<path d="m4 5 8 7-8 7V5Zm9 0 8 7-8 7V5Z"/>',
+ pause:'<path d="M8 5v14m8-14v14" stroke-width="4"/>',
+ resume:'<path d="m7 4 14 8-14 8V4Z"/>',
+ stop:'<rect x="5" y="5" width="14" height="14" rx="2"/>',
+ dictate:'<path d="M4 5h8M4 9h5M4 13h3m10 1v6m-3 0h6M12 10v2a5 5 0 0 0 10 0v-2"/><rect x="15" y="2" width="4" height="10" rx="2"/>',
+ interrupt:'<path d="m14 2-9 12h7l-2 8 9-12h-7l2-8Z"/>',
+ send:'<path d="m22 2-7 20-4-9L2 9l20-7ZM11 13l11-11"/>'
+};
+const glyph=(icon,extra='')=>'<svg class="action-icon '+extra+'" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-'+icon+'"/></svg>';
+const button=(id,label,icon,attrs='')=>'<button id="'+id+'" class="icon-button'+(id==='send'?' primary':'')+'" aria-label="'+label+'" title="'+label+'" '+attrs+'>'+glyph(icon,id==='mute'?'mic-on':'')+(id==='mute'?glyph('mic-off','mic-off'):'')+'</button>';
+const symbols='<svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs>'+Object.entries(paths).map(([id,shape])=>'<symbol id="icon-'+id+'" viewBox="0 0 24 24">'+shape+'</symbol>').join('')+'</defs></svg>';
+
 return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${source}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${style}"><title>Claude Voice</title></head>
-<body><header><strong id="name">Agent</strong></header>
+<body>${symbols}<header><strong id="name">Agent</strong></header>
 <nav aria-label="Voice views"><button class="tab active" data-tab="voices" aria-pressed="true">Voices</button><button class="tab" data-tab="views" aria-pressed="false">Notes</button><button class="tab" data-tab="live" aria-pressed="false">Gemini Live</button></nav>
 <main><section id="voices" aria-label="Agent replies"><p class="empty">Waiting for this agent’s replies…</p></section><section id="views" aria-label="Agent notes" hidden></section><section id="live" aria-label="Gemini Live" hidden><p id="live-partial" aria-live="polite"></p><div id="captions"></div></section></main>
-<footer class="voice-dock"><div class="gemini-connection"><span id="gemini-status" class="connection-badge" data-state="disconnected" role="status" aria-live="polite">Gemini · Disconnected</span><span class="spacer"></span><button id="settings" aria-label="Configure Gemini voice" title="Gemini model, voice, API key and settings">⚙</button><button id="refresh" aria-label="Refresh voice history">↻</button></div>
+<footer class="voice-dock"><div class="gemini-connection"><span id="gemini-status" class="connection-badge" data-state="disconnected" role="status" aria-live="polite">Gemini · Disconnected</span><span class="spacer"></span>${button('settings','Configure Gemini voice','settings')}${button('refresh','Refresh replies','refresh')}</div>
 <p id="live-status" role="status">Connect Gemini Live to speak naturally.</p><span id="connection">Loading replies…</span><div id="error" role="alert" hidden></div>
-<div class="live-controls"><button id="connect">Connect Gemini Live</button><button id="disconnect" hidden>Disconnect</button><button id="mute" hidden>Mute mic</button><button id="live-send" hidden>Send now</button><select id="live-mode" aria-label="Spoken prompt delivery"><option value="auto">Auto-send polished prompt</option><option value="review">Review before sending</option></select></div>
-<div class="transport"><button id="pause">Pause</button><button id="resume">Resume</button><button id="stop" title="Stop playback and turn off auto-speak; microphone stays connected">Stop speech</button><label><input id="auto" type="checkbox"> Auto-speak</label><label class="early-label"><input id="early" type="checkbox" checked> Read replies early</label></div>
-<section class="composer" aria-label="Send a prompt"><textarea id="prompt" rows="3" placeholder="Message this agent session…" aria-label="Message to the selected agent session" maxlength="32000"></textarea><div class="compose-actions"><button id="dictate" title="Connect Gemini Live in review mode">🎙 Dictate</button><span class="spacer"></span><button id="interrupt">Interrupt</button><button id="send" class="primary">Send ↵</button></div></section></footer>
+<div class="live-controls">${button('connect','Connect Gemini Live','connect')}${button('disconnect','Disconnect Gemini Live','disconnect','hidden')}${button('mute','Mute microphone','mic','hidden aria-pressed="false"')}${button('live-send','Finish and send spoken prompt now','finish','hidden')}<select id="live-mode" aria-label="Spoken prompt delivery"><option value="auto">Auto-send polished prompt</option><option value="review">Review before sending</option></select></div>
+<div class="transport">${button('pause','Pause readout','pause')}${button('resume','Resume readout','resume')}${button('stop','Stop readout and auto-speak','stop')}<label><input id="auto" type="checkbox"> Auto-speak</label><label class="early-label"><input id="early" type="checkbox" checked> Read replies early</label></div>
+<section class="composer" aria-label="Send a prompt"><textarea id="prompt" rows="3" placeholder="Message this agent session…" aria-label="Message to the selected agent session" maxlength="32000"></textarea><div class="compose-actions">${button('dictate','Dictate with Gemini and review before sending','dictate')}<span class="spacer"></span>${button('interrupt','Interrupt agent','interrupt')}${button('send','Send message (Ctrl+Enter)','send')}</div></section></footer>
 <script nonce="${nonce}" src="${script}"></script></body></html>`;
 }
 module.exports={VoicePanel,stopAll,html};

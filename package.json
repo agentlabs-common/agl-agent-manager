@@ -2,7 +2,7 @@
   "name": "claude-folder-agents",
   "displayName": "Agent Sessions & Voice",
   "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {

@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.5.0.vsix**.
+2. Select **claude-folder-agents-0.5.1.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **Agent Sessions** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.5.0.vsix --force`
+`code --install-extension claude-folder-agents-0.5.1.vsix --force`
 
 ## Codex sessions
 
@@ -77,6 +77,7 @@ Click a reply in either tab to hear it with the selected Gemini TTS voice.
 **Pause**, **Resume**, and **Stop speech** control playback.
 
 Connection status, microphone controls, settings, playback controls, and the composer are grouped at the bottom.
+Action buttons use compact icons. Hover for a tooltip; each button also has an accessible label.
 
 **Dictate** connects Gemini Live in **Review before sending** mode.
 Gemini turns your spoken thought into a lightly polished draft. Edit it and select **Send** when ready.
