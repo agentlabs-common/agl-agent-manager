@@ -40,7 +40,7 @@ def listing(cwd):
 def transcript(sid):
     if not UUID.fullmatch(sid):raise ValueError('Invalid Claude session ID')
     hits=glob.glob(os.path.expanduser('~/.claude/projects/*/'+sid+'.jsonl'))
-    return hits[0] if hits else None
+    return max(hits,key=os.path.getmtime) if hits else None
 def reply_text(text):
     text=re.sub(r'<view>.*?</view>','',text,flags=re.S)
     text=VOICE.sub('',text)
@@ -67,14 +67,18 @@ def voices(sid,cursor=None):
     for line in complete.splitlines():
         try:e=json.loads(line)
         except (ValueError,UnicodeDecodeError):continue
-        content=e.get('message',{}).get('content',[]);ts=e.get('timestamp','')
-        turn=e.get('message',{}).get('id') or e.get('requestId') or e.get('uuid') or ts
+        if not isinstance(e,dict):continue
+        message=e.get('message') or {}
+        if not isinstance(message,dict):continue
+        content=message.get('content',[]);ts=e.get('timestamp','')
+        turn=message.get('id') or e.get('requestId') or e.get('uuid') or ts
         if e.get('type')=='user' and not e.get('isMeta') and isinstance(content,str) and content.strip() and not content.lstrip().startswith('<'):
             items.append(dict(ts=ts,text=content,you=True,id=str(turn)+':prompt'))
+        if e.get('type')=='assistant' and isinstance(content,str):content=[dict(type='text',text=content)]
         if e.get('type')!='assistant' or not isinstance(content,list):continue
         bodies=[];speech_bodies=[];summaries=[]
         for index,block in enumerate(content):
-            if block.get('type')!='text':continue
+            if not isinstance(block,dict) or block.get('type')!='text':continue
             text=block.get('text','');spoken=VOICE.findall(text);body=reply_text(text)
             if body:
                 bodies.append(body);speech_bodies.append(re.sub(r'<view>.*?</view>','',VOICE.sub('',text),flags=re.S))

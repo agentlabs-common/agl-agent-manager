@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.4.1.vsix**.
+2. Select **claude-folder-agents-0.5.0.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **Agent Sessions** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.4.1.vsix --force`
+`code --install-extension claude-folder-agents-0.5.0.vsix --force`
 
 ## Codex sessions
 
@@ -26,7 +26,7 @@ Claude and Codex appear together in **Agent Sessions**, limited to the exact sel
 
 Open a Codex row to launch `codex resume <thread-id>` with the shared Gemini voice pane. Repeated clicks reuse the terminal.
 The extension reads Codex daemon history without sending prompts, forking threads, or changing approval policies. Native Codex handles terminal input and approvals.
-Completed Codex replies use the same full-message TTS, Indian voice catalog, dictation, and Gemini Live transcription as Claude.
+Completed Codex replies use the same full-message TTS, Indian voice catalog, dictation, and Gemini Live prompt editing as Claude.
 
 Use **+ → Codex**, **Agent Sessions: New Codex Session**, or **New Codex Session (YOLO)** to create a session.
 Existing idle Codex sessions can use **Restart Session in YOLO Mode**. Wait for an active task to finish before switching mode.
@@ -70,49 +70,31 @@ The extension verifies the folder and waits for the previous process to stop bef
 
 ## Voice
 
-The voice pane shows complete published Claude replies and your prompts.
-It preserves every sentence and code text in the pane. A voice summary is used only when no reply body is available.
-Speech skips URLs, URIs, filesystem paths, filenames, and fenced code blocks. The visible reply remains complete.
-Click a reply to play it with **Gemini TTS**. Live-tab messages are clickable too.
-**Auto-speak** uses the same Gemini TTS player. Playback does not open the microphone or require a Live connection.
-Clicking a reply reads its complete current text. Automatic readout waits for ongoing playback instead of replacing it.
-**Read replies early** reads published reply text without waiting for a closing voice tag.
-It does not shorten the reply to its first sentence. As a reply grows, remaining text queues after the current audio.
-The reader follows appended transcript records every 250 ms locally and 500 ms over SSH.
-It does not rescan the complete transcript. A later voice block from the same reply is not read twice.
-**Pause** and **Resume** control playback. **Stop speech** stops playback and turns off auto-speak.
-Gemini stays connected until you select **Disconnect Gemini**.
-**Notes** shows view blocks as plain text.
+Replies populate both Voices and Gemini Live even when auto-speak is off or an audio helper fails.
+The pane shows the full published reply. Speech skips paths, URLs, filenames, and fenced code.
+Click a reply in either tab to hear it with the selected Gemini TTS voice.
+**Auto-speak** queues new replies without interrupting audio already playing.
+**Pause**, **Resume**, and **Stop speech** control playback.
 
-1. Select **Dictate** to record speech.
-2. Select **Review** to put the result in the prompt field, or **Send speech** to submit it.
-3. Select **Cancel** to discard a recording.
+Connection status, microphone controls, settings, playback controls, and the composer are grouped at the bottom.
 
-Typed and dictated prompts go to the selected session's terminal.
-**Interrupt** sends Ctrl+C to that terminal.
-Closing the voice pane stops its microphone recording.
-
-Speech uses the independent agentlabs-voice setup:
-`~/.claude/hooks/stt-stream.py`, the Python environment at `~/.venvs/tts`,
-and settings in `~/.claude/hooks/tts.conf`.
-Dictation uses Deepgram. Playback streams Gemini TTS through aplay.
-Gemini TTS uses your Gemini API key from the environment or `~/.config/agentlabs/keys.env`.
-**Tts Model** and **Tts Voice** in extension settings control readout independently of Live.
-Defaults are `gemini-3.8-flash-tts` and `Aoede`. Python 3 is sufficient for TTS.
-The extension has its own recording and player state.
-It does not use another terminal manager, its mods, its sockets, or its voice relay.
+**Dictate** connects Gemini Live in **Review before sending** mode.
+Gemini turns your spoken thought into a lightly polished draft. Edit it and select **Send** when ready.
+In **Auto-send polished prompt** mode, complete spoken prompts go directly to the selected agent terminal.
+Typed prompts are sent as written. **Interrupt** sends Ctrl+C to the terminal.
+Closing the voice pane stops its microphone and connection.
 
 ## Gemini configuration
 
 Click **⚙** in the voice pane or Claude Sessions toolbar, or run **Agent Sessions: Configure Gemini Voice**.
-Choose the TTS model, one of 30 voices or a custom voice ID, speaking style, transcription model, microphone behavior, or Python executable.
+Choose the TTS model, one of 30 voices or a custom voice ID, speaking style, Live model, pause timing, prompt polishing, microphone behavior, or Python executable.
 For Indian female voices, choose **TTS voice → Indian English · Female** or **Hindi · Female**.
 **Browse voice catalog…** offers Indian languages and gender filters. The catalog uses the voices available to your Gemini API key.
 Each result shows its name, language, accent, gender, pitch, and description. Search matches these details.
 Select a voice, then **Preview voice** to hear it or **Use this voice** to save it. **Stop preview** stops the sample.
 Preview does not change your saved voice. Catalog previews use your Gemini TTS quota.
 
-TTS changes apply on the next readout. Reconnect Live after changing its key, transcription model, or Python executable.
+TTS changes apply on the next readout. Reconnect Live after changing its key, Live model, pause timing, prompt polishing, or Python executable.
 
 **Set Gemini API key** saves the key in VS Code secure storage on the local computer. It takes priority over environment and keys.env values for both TTS and Live.
 The key is passed only to local voice helpers, not to the webview, command arguments, repository settings, or SSH host.
@@ -120,37 +102,32 @@ The key is passed only to local voice helpers, not to the webview, command argum
 
 ## Gemini Live
 
-1. Open the **Gemini Live** tab in the voice pane.
-2. Select **Connect Gemini Live**.
-3. Speak to the selected Claude session.
-4. Select **Disconnect** to stop the microphone and connection.
+All microphone input uses the conversational **gemini-3.8-live** model. No Deepgram or external speech hooks are used.
 
-The **Mute mic** control mutes input. **Send now** sends the current transcript immediately.
-Final speech segments also send automatically after a short pause.
-Gemini Live transcribes speech. Claude performs the task, and Gemini TTS reads the reply.
-Text-to-speech uses its own REST stream and does not use a Live audio model.
-The connection badge stays visible on every tab. **Disconnect Gemini** stops live audio and the microphone.
-Replies and live captions follow the newest content at the bottom.
-The panel shows live captions, connection state, and the time to first readout audio.
+1. Select **Connect Gemini Live** in the bottom controls.
+2. Speak naturally. Gemini keeps context across thinking pauses and self-corrections.
+3. Gemini calls the prompt-submission function when your thought is complete.
+4. Use **Send now** to explicitly end a dictation, or **Disconnect** to stop the microphone.
 
-The default input model is **gemini-3.5-transcribe-live**.
-The readout model is configured under **Tts Model**, separately from Live.
-The service uses your Gemini API key and quota.
-It reads **GEMINI_API_KEY** or **GOOGLE_API_KEY** from the environment or
-`~/.config/agentlabs/keys.env`. Keys stay in the Python process.
-The Python environment needs **websockets**. The computer needs **arecord** and **aplay**.
+The default minimum silence window is **3 seconds**. In settings, choose **Pause before sending** to use 3, 5, or a custom 1–10 seconds.
+Gemini can continue waiting if the thought is incomplete. Fillers such as “right” and “or rather” are not submitted on their own.
+After **3 minutes without microphone activity**, Live disconnects automatically. Unfinished dictation is preserved in the composer, and reply readout stays available.
+**Polish spoken prompts** cleans up grammar, punctuation, and false starts while preserving intent, technical terms, paths, and constraints.
+Disable it to preserve the original wording. Reconnect after changing Live settings.
 
-The microphone pauses during readout by default to prevent a speaker-feedback loop.
-With a headset, **Live Barge In** keeps the microphone active during playback.
-**Interrupt** stops speech and sends Ctrl+C to Claude.
-Closing the voice pane shuts down its live connection and audio processes.
+Gemini is a prompt editor, not the coding agent. Claude or Codex performs the task.
+Reply readout uses the dedicated Gemini TTS API, preserving the selected Indian or other catalog voice.
 
-Speech starts when Claude publishes its first reply text.
-Claude's own reasoning time and text publication time still affect response latency.
-Gemini TTS playback streams audio without waiting for the complete reply audio.
+**Mute mic** mutes input. **Review before sending** places polished prompts in the composer instead of submitting them.
+The microphone pauses during reply playback by default to prevent speaker echo.
+With a headset, **Live Barge In** keeps it active during playback.
 
-[Gemini Live API documentation](https://aistudio.google.com/docs/live-api/capabilities).
-[Gemini TTS API documentation](https://aistudio.google.com/docs/speech-generation).
+The Gemini key comes from VS Code secure storage, the environment, or ~/.config/agentlabs/keys.env.
+The Live Python environment needs **websockets**, and the local computer needs **arecord** and **aplay**.
+Speech starts after the agent publishes reply text, so the agent’s own response time still affects readout latency.
+
+[Gemini Live documentation](https://aistudio.google.com/docs/live-api).
+[Gemini TTS documentation](https://aistudio.google.com/docs/speech-generation).
 
 ## Remote sessions
 
@@ -173,7 +150,7 @@ A phone or browser client does not stream its microphone to the extension.
 
 - Native Claude Code with `claude agents --json`, `claude --bg`, and `claude attach` (checked with 2.1.318).
 - VS Code 1.85 or later, Linux, Python 3, and a trusted workspace.
-- For voice: independent agentlabs-voice configuration, arecord, aplay, a Gemini API key for readout, and a Deepgram key for separate dictation.
+- For voice: arecord, aplay, a Gemini API key, and a Python environment with websockets.
 - For live interactive tmux sessions: tmux.
 
 **Claude Folder Agents: Claude Path** sets the local CLI executable.

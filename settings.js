@@ -30,7 +30,9 @@ async function configureGemini(vscode,context,voiceBackend){
   {label:'Speaking style',description:config.get('ttsStyle')||'Natural delivery',id:'ttsStyle'},
   {label:'Set Gemini API key',description:stored?'Secure key is saved':'Uses environment or keys.env when no secure key is saved',id:'key'},
   ...(stored?[{label:'Remove saved API key',description:'Return to environment or keys.env',id:'removeKey'}]:[]),
-  {label:'Transcription model',description:config.get('transcriptionModel')||'Default / environment',id:'transcriptionModel'},
+  {label:'Gemini Live model',description:config.get('liveModel')||'gemini-3.8-live',id:'liveModel'},
+  {label:'Pause before sending',description:String(config.get('livePauseSeconds',3))+' seconds',id:'livePauseSeconds'},
+  {label:'Polish spoken prompts',description:config.get('refineSpokenPrompts',true)?'On':'Off',id:'refineSpokenPrompts'},
   {label:'Microphone during readout',description:config.get('liveBargeIn',false)?'On (headset)':'Off (prevents speaker echo)',id:'liveBargeIn'},
   {label:'Voice Python executable',description:config.get('voicePython')||'Automatic',id:'voicePython'},
   {label:'All extension settings',id:'all'}
@@ -57,12 +59,16 @@ async function configureGemini(vscode,context,voiceBackend){
    const backend=voiceBackend||new Backend({getVoiceOptions:()=>voiceOptions(vscode,context)});
    value=await chooseCatalogVoice(vscode,context,filter,backend);
   }else value=pick.custom?await vscode.window.showInputBox({title:'Custom '+chosen.label,value:config.get(chosen.id)||'',prompt:'Enter the model or voice ID available to your Gemini account.'}):pick.value;
+ }else if(chosen.id==='livePauseSeconds'){
+  const pick=await vscode.window.showQuickPick([{label:'3 seconds',value:3},{label:'5 seconds',value:5},{label:'Custom…',custom:true}],{title:'Pause before considering your turn complete'});if(!pick)return;value=pick.custom?Number(await vscode.window.showInputBox({title:'Pause in seconds',value:String(config.get('livePauseSeconds',3)),validateInput:v=>Number(v)>=1&&Number(v)<=10?undefined:'Choose 1 to 10 seconds.'})):pick.value;if(!Number.isFinite(value)||value<1||value>10)return;
+ }else if(chosen.id==='refineSpokenPrompts'){
+  const pick=await vscode.window.showQuickPick([{label:'On — polish grammar and self-corrections',value:true},{label:'Off — keep original wording',value:false}],{title:chosen.label});if(!pick)return;value=pick.value;
  }else if(chosen.id==='liveBargeIn'){
   const pick=await vscode.window.showQuickPick([{label:'Off — prevent speaker echo',value:false},{label:'On — use a headset',value:true}],{title:chosen.label});if(!pick)return;value=pick.value;
  }else value=await vscode.window.showInputBox({title:chosen.label,value:config.get(chosen.id)||'',prompt:chosen.id==='ttsStyle'?'For example: warm, calm, and conversational. Leave empty for natural delivery.':'Leave empty to use the default.'});
  if(value===undefined)return;
  if(typeof value==='string')value=value.trim();
  await config.update(chosen.id,value,vscode.ConfigurationTarget.Global);
- await vscode.window.showInformationMessage(chosen.id==='transcriptionModel'||chosen.id==='voicePython'||chosen.id==='liveBargeIn'?'Saved. Reconnect Gemini Live to apply the change.':'Saved. The next readout uses the updated settings.');
+ await vscode.window.showInformationMessage(['liveModel','livePauseSeconds','refineSpokenPrompts','voicePython','liveBargeIn'].includes(chosen.id)?'Saved. Reconnect Gemini Live to apply the change.':'Saved. The next readout uses the updated settings.');
 }
 module.exports={configureGemini,voiceOptions,chooseCatalogVoice,VOICES};
