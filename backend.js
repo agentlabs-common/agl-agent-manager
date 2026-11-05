@@ -1,5 +1,5 @@
 const fs=require('node:fs/promises');const path=require('node:path');const os=require('node:os');const{execFile}=require('node:child_process');const{promisify}=require('node:util');const exec=promisify(execFile);
-const{sshArgs}=require('./remote');
+const{sshArgs,hostKey}=require('./remote');
 const UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 function quote(value){return "'"+String(value).replaceAll("'","'\"'\"'")+"'";}
 function userEnvironment(){const env={...process.env};for(const key of ['CLAUDECODE','HC_TERMINAL_ID','HC_SCOPE','CODEX_THREAD_ID'])delete env[key];if(!env.XDG_RUNTIME_DIR&&process.getuid)env.XDG_RUNTIME_DIR='/run/user/'+process.getuid();env.PATH=path.join(os.homedir(),'.local','bin')+path.delimiter+(env.PATH||'');return env;}
@@ -10,7 +10,8 @@ class Backend{
  if(host){if(!/^[a-zA-Z0-9_][a-zA-Z0-9_.@:-]*$/.test(host))throw new Error('Invalid SSH host.');const script=await fs.readFile(this.helper,'utf8');await fs.mkdir(this.recordDir,{recursive:true,mode:0o700});raw=await this.run(this.sshPath,[...sshArgs(this.scope,this.sshConfigFile),'-o','BatchMode=yes','-o','ConnectTimeout=8','-o','ControlMaster=auto','-o','ControlPersist=60','-o','ControlPath='+path.join(this.recordDir,'ssh-%C'),'--',host,'python3 - '+[action,cwd,...args].map(quote).join(' ')],{input:script});}
  else raw=await this.run('python3',['-I',this.helper,action,cwd,...args],{env:{...userEnvironment(),CLAUDE_AGENTS_CLI:this.claude}});
  return JSON.parse(raw);}
- async sessions(){const rows=await this.agent('list');return rows.map(s=>({...s,key:(this.scope.host||'local')+':'+s.sessionId,remote:!!this.scope.host,host:this.scope.host}));}
+ async sessions(){const rows=await this.agent('list');return rows.map(s=>({...s,key:hostKey(this.scope)+':'+s.sessionId,remote:!!this.scope.host,host:this.scope.host}));}
+ async sessionsUnder(roots){if(!roots.length)return[];const rows=await this.agent('managed-list',JSON.stringify(roots));return rows.map(s=>({...s,key:hostKey(this.scope)+':'+s.sessionId,remote:!!this.scope.host,host:this.scope.host}));}
  async prepare(session){if(!UUID.test(session.sessionId))throw new Error('Invalid session ID.');return this.agent('prepare',session.sessionId,String(this.yolo));}
  async restartYolo(session){if(!UUID.test(session.sessionId))throw new Error('Invalid session ID.');return this.agent('restart-yolo',session.sessionId);}
  async deleteSession(session){if(!UUID.test(session.sessionId))throw new Error('Invalid session ID.');return this.agent('delete',session.sessionId);}

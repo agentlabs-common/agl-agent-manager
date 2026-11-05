@@ -2,7 +2,7 @@
   "name": "claude-folder-agents",
   "displayName": "AGL Agent Manager",
   "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {
@@ -116,6 +116,84 @@
         "title": "Delete Closed Session…",
         "category": "AGL Agent Manager",
         "icon": "$(trash)"
+      },
+      {
+        "command": "claudeFolderAgents.createWorkspace",
+        "title": "New Workspace Session",
+        "category": "AGL Agent Manager",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "claudeFolderAgents.refreshWorkspaces",
+        "title": "Refresh Workspace Sessions",
+        "category": "AGL Agent Manager",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "claudeFolderAgents.openWorkspace",
+        "title": "Open Workspace Session and Agent",
+        "category": "AGL Agent Manager",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "claudeFolderAgents.openWorkspaceFolder",
+        "title": "Open Session Folder",
+        "category": "AGL Agent Manager",
+        "icon": "$(folder)"
+      },
+      {
+        "command": "claudeFolderAgents.chooseWorkspaceAgent",
+        "title": "Choose Agent for Workspace Session",
+        "category": "AGL Agent Manager",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "claudeFolderAgents.removeWorkspace",
+        "title": "Remove Workspace Session…",
+        "category": "AGL Agent Manager",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "claudeFolderAgents.refreshSkills",
+        "title": "Refresh Skills",
+        "category": "AGL Agent Manager",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "claudeFolderAgents.openSkill",
+        "title": "Open Skill",
+        "category": "AGL Agent Manager",
+        "icon": "$(book)"
+      },
+      {
+        "command": "claudeFolderAgents.removeSkill",
+        "title": "Remove Skill…",
+        "category": "AGL Agent Manager",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "claudeFolderAgents.createSkill",
+        "title": "New Skill",
+        "category": "AGL Agent Manager",
+        "icon": "$(add)"
+      },
+      {
+        "command": "claudeFolderAgents.importSkill",
+        "title": "Import Skill Folder",
+        "category": "AGL Agent Manager",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "claudeFolderAgents.enableSkill",
+        "title": "Enable Skill",
+        "category": "AGL Agent Manager",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "claudeFolderAgents.disableSkill",
+        "title": "Disable Skill",
+        "category": "AGL Agent Manager",
+        "icon": "$(eye-closed)"
       }
     ],
     "views": {
@@ -123,13 +201,21 @@
         {
           "id": "claudeFolderAgents.sessions",
           "name": "AGL Agent Manager"
+        },
+        {
+          "id": "claudeFolderAgents.workspaces",
+          "name": "AGL Workspace Sessions"
+        },
+        {
+          "id": "claudeFolderAgents.skills",
+          "name": "AGL Skills"
         }
       ]
     },
     "menus": {
       "view/title": [
         {
-          "command": "claudeFolderAgents.new",
+          "command": "claudeFolderAgents.createWorkspace",
           "when": "view == claudeFolderAgents.sessions",
           "group": "navigation@1"
         },
@@ -137,11 +223,6 @@
           "command": "claudeFolderAgents.refresh",
           "when": "view == claudeFolderAgents.sessions",
           "group": "navigation@2"
-        },
-        {
-          "command": "claudeFolderAgents.newYolo",
-          "when": "view == claudeFolderAgents.sessions",
-          "group": "navigation@3"
         },
         {
           "command": "claudeFolderAgents.configureGemini",
@@ -152,6 +233,31 @@
           "command": "claudeFolderAgents.filterSessions",
           "when": "view == claudeFolderAgents.sessions",
           "group": "navigation@2.5"
+        },
+        {
+          "command": "claudeFolderAgents.createWorkspace",
+          "when": "view == claudeFolderAgents.workspaces",
+          "group": "navigation@1"
+        },
+        {
+          "command": "claudeFolderAgents.refreshWorkspaces",
+          "when": "view == claudeFolderAgents.workspaces",
+          "group": "navigation@2"
+        },
+        {
+          "command": "claudeFolderAgents.createSkill",
+          "when": "view == claudeFolderAgents.skills",
+          "group": "navigation@1"
+        },
+        {
+          "command": "claudeFolderAgents.importSkill",
+          "when": "view == claudeFolderAgents.skills",
+          "group": "navigation@2"
+        },
+        {
+          "command": "claudeFolderAgents.refreshSkills",
+          "when": "view == claudeFolderAgents.skills",
+          "group": "navigation@3"
         }
       ],
       "explorer/context": [
@@ -181,6 +287,56 @@
           "command": "claudeFolderAgents.deleteSession",
           "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Closed|Hidden)$/",
           "group": "session@3"
+        },
+        {
+          "command": "claudeFolderAgents.openWorkspace",
+          "when": "view == claudeFolderAgents.workspaces && viewItem == aglWorkspace",
+          "group": "session@1"
+        },
+        {
+          "command": "claudeFolderAgents.openWorkspaceFolder",
+          "when": "view == claudeFolderAgents.workspaces && viewItem == aglWorkspace",
+          "group": "session@2"
+        },
+        {
+          "command": "claudeFolderAgents.chooseWorkspaceAgent",
+          "when": "view == claudeFolderAgents.workspaces && viewItem == aglWorkspace",
+          "group": "session@3"
+        },
+        {
+          "command": "claudeFolderAgents.removeWorkspace",
+          "when": "view == claudeFolderAgents.workspaces && viewItem == aglWorkspace",
+          "group": "session@4"
+        },
+        {
+          "command": "claudeFolderAgents.openSkill",
+          "when": "view == claudeFolderAgents.skills && viewItem =~ /^aglSkill(Enabled|Disabled|ReadOnly)$/",
+          "group": "skill@1"
+        },
+        {
+          "command": "claudeFolderAgents.removeSkill",
+          "when": "view == claudeFolderAgents.skills && viewItem =~ /^aglSkill(Enabled|Disabled)$/",
+          "group": "skill@3"
+        },
+        {
+          "command": "claudeFolderAgents.createSkill",
+          "when": "view == claudeFolderAgents.skills && viewItem == aglSkillSource",
+          "group": "skill@1"
+        },
+        {
+          "command": "claudeFolderAgents.importSkill",
+          "when": "view == claudeFolderAgents.skills && viewItem == aglSkillSource",
+          "group": "skill@2"
+        },
+        {
+          "command": "claudeFolderAgents.enableSkill",
+          "when": "view == claudeFolderAgents.skills && viewItem == aglSkillDisabled",
+          "group": "skill@2"
+        },
+        {
+          "command": "claudeFolderAgents.disableSkill",
+          "when": "view == claudeFolderAgents.skills && viewItem == aglSkillEnabled",
+          "group": "skill@2"
         }
       ]
     },
@@ -273,6 +429,11 @@
           "default": true,
           "scope": "application",
           "description": "Remove only redundant repetitions and hesitation sounds. Preserve every distinct spoken requirement and fall back to original wording for unsafe edits."
+        },
+        "claudeFolderAgents.workspaceBaseBranch": {
+          "type": "string",
+          "default": "main",
+          "description": "Base branch for canonical clones when creating workspace session worktrees. Uses origin/<branch> when origin exists."
         }
       }
     }

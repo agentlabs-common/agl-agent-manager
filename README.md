@@ -1,8 +1,8 @@
 # AGL Agent Manager
 
 A standalone VS Code extension for native Claude Code and Codex sessions.
-It shows sessions whose working directory equals the current folder.
-Subfolders and other workspaces are excluded.
+It lists Claude and Codex agents only inside the current workspace’s .sessions folders, including their repository worktrees.
+Agents started directly in the canonical workspace or elsewhere are excluded.
 Claude sessions use an orange icon. Codex sessions use a green terminal icon.
 
 ## Install
@@ -11,17 +11,17 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.6.1.vsix**.
+2. Select **claude-folder-agents-0.7.0.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.6.1.vsix --force`
+`code --install-extension claude-folder-agents-0.7.0.vsix --force`
 
 ## Codex sessions
 
-Claude and Codex appear together in **AGL Agent Manager**, limited to the exact selected folder.
+Claude and Codex appear together in **AGL Agent Manager**, limited to managed .sessions folders and their descendants.
 **Providers** in extension settings can show either provider alone. A missing provider does not hide sessions from the other one.
 
 Open a Codex row to launch `codex resume <thread-id>` with the shared Gemini voice pane. Repeated clicks reuse the terminal.
@@ -38,9 +38,45 @@ The microphone and Gemini key stay on the local VS Code computer. Codex history 
 
 [Official Codex app-server documentation](https://developers.openai.com/codex/app-server).
 
+## Workspace sessions
+
+**AGL Workspace Sessions** creates isolated folders of repository worktrees. No companion skill is needed or installed for workspace isolation.
+
+1. Open the workspace containing the canonical repository clones.
+2. Select **+** in **AGL Agent Manager** or **AGL Workspace Sessions**.
+3. Choose Claude or Codex, a session name, and the repositories to include.
+4. The manager fetches the base branch and creates **.sessions/<agent>/<name>-<id>/** with a worktree for each repository on **<agent>/<name>-<id>**.
+5. It opens that folder in a new VS Code window and starts the selected native agent and voice pane there.
+
+The default base is **main**, using **origin/main** when origin exists. Set **Workspace Base Branch** for another branch. Canonical clones must be clean and on that branch; their working trees are not switched, edited or built by this operation. The repository chooser replaces the hardcoded EB repository list. Failed creation attempts rollback, including worktrees registered before a checkout-hook failure; retained paths are reported.
+
+Each new session contains **.agl-session.json**, **AGENTS.md**, and **CLAUDE.md** with the branch and worktree paths. The manifest records native conversation IDs after launch for later resume. Existing .sessions/<agent>/<folder> directories are recognized even without a manifest. Worktree metadata is discovered from their canonical clones; no skill or manual migration is needed.
+
+**Working directory and history are separate.** A new agent starts in the specific session folder. Its conversation history stays in the native agent data directory on the machine running it, rather than being copied into the workspace folder. Existing agents are not moved, stopped, or deleted. The agent list excludes agents outside .sessions, including those started directly in the canonical workspace. Closed histories remain visible while their workspace folder still exists.
+
+Select a workspace row to open its folder and start or resume its agent. **Choose Agent for Workspace Session** opens the other provider; **Open Session Folder** opens only the folder. Native launchers currently support Claude and Codex.
+
+**Remove Workspace Session…** checks all repositories before removing the first worktree. Running agents, dirty/untracked work, symbolic-link escapes, and unexpected files outside the repositories block removal. After confirmation, clean worktrees and ignored build outputs are removed; branches and native conversation history are kept. A later Git failure reports partial removal and preserves the remaining worktrees and metadata. Project skills or notes in the session must be moved or removed before cleanup.
+
+The workspace and skill engines use Node APIs and Git argument arrays, without Bash. SSH jobs use Node on PATH or VS Code Server’s bundled Node; Windows SSH runtime discovery uses PowerShell and the Remote SSH platform setting. The existing microphone and playback requirements are separate below. Linux and real SSH integration were tested; Windows and macOS host runs have not yet been performed.
+
+## Skills GUI
+
+**AGL Skills** manages folder-based skills separately from workspace isolation. It groups workspace and personal sources for Claude, Codex/shared AGENTS skills, and legacy Codex locations on the selected local or SSH host.
+
+- **New Skill** creates a SKILL.md from a name and description and opens it for editing.
+- **Import Skill Folder** copies a folder containing SKILL.md and its supporting files into the chosen source; existing skills are not overwritten.
+- Select a skill to edit its SKILL.md. Bundled system skills open as a preview without editing their source.
+- **Disable Skill** moves the entry outside the provider’s discovery directory; **Enable Skill** restores it without overwriting a replacement.
+- **Remove Skill…** requires confirmation. Removing a linked entry keeps the linked source folder.
+
+Save or discard unsaved skill edits before disabling or removing a skill. Changes affect future skill discovery; a running agent may need to reload or restart. Project skills are scoped to the selected workspace folder; personal skills apply on that host. Skills supplied by plugin catalogs and GitHub installation are not managed by this first GUI version.
+
+Source discovery follows [Codex skills](https://developers.openai.com/codex/skills) and [Claude skills](https://code.claude.com/docs/en/skills). Session instructions follow [Codex AGENTS.md](https://developers.openai.com/codex/guides/agents-md) and [Claude memory](https://code.claude.com/docs/en/memory).
+
 ## Closed and hidden sessions
 
-The default **All sessions** filter includes running sessions, saved Claude conversations, and closed or archived Codex conversations in the exact current directory. The extension cannot recover history already removed by the agent.
+The default **All sessions** filter includes running sessions, saved Claude conversations, and closed or archived Codex conversations under existing .sessions workspace folders. The extension cannot recover history already removed by the agent.
 Use the **Filter Sessions** funnel in the view title to choose **All**, **Running**, **Closed**, or **Hidden** sessions.
 
 Right-click a session for **Hide Session**. This changes only this extension's view and keeps the conversation and any running task.
@@ -53,14 +89,14 @@ Opening an archived Codex conversation restores that same thread before opening 
 ## Folder scope
 
 The default scope is the active editor's workspace folder, or the first open folder.
-Right-click a folder and select **Show AGL Agent Manager** to use that exact directory.
+Right-click a canonical workspace or session folder and select **Show AGL Agent Manager**.
 **AGL Agent Manager: Show Sessions in Workspace Folders** restores the default scope.
-Symbolic links resolve to the same directory.
-The list does not include child directories or all agents on the computer.
+Canonical workspace paths resolve symbolic links. Managed session paths themselves must not be symbolic links.
+The list includes only agents whose working directories are inside a recognized .sessions folder; it includes descendant repository directories and excludes canonical clones.
 
 ## Terminals
 
-The extension reads `claude agents --json --all --cwd <folder>` and applies exact directory matching.
+The extension reads native agent inventories and saved conversations, then applies .sessions directory boundaries before displaying or attaching them.
 It attaches native background sessions with `claude attach <id>`.
 The **+** button lets you choose Claude or Codex. Claude starts a native background session; Codex creates a thread and opens its native terminal.
 Repeated clicks reuse the session's terminal and voice pane.
@@ -148,7 +184,7 @@ Speech starts after the agent publishes reply text, so the agent’s own respons
 
 Run **AGL Agent Manager: Open Remote Working Directory over SSH**.
 Enter your SSH host and an absolute working directory on that host.
-The list then shows only sessions in that exact remote directory.
+The list then shows agents only under that workspace’s .sessions folders.
 **Show Sessions in Workspace Folders** returns to the local workspace.
 
 The extension sends its Python helper over SSH stdin without installing it remotely.
@@ -177,7 +213,7 @@ A phone or browser client does not stream its microphone to the extension.
 Run `npm install` first to install the WebSocket transport dependency.
 
 Open this directory in VS Code and press **F5**.
-`npm test` checks exact folder scope, Claude icons, terminal reuse, SSH quoting, and voice lifecycle.
+`npm test` checks managed-session boundaries, worktree lifecycle, skill management, native terminals, SSH transport, and voice lifecycle.
 `npm run test:host` loads the extension in an isolated VS Code window (requires Xvfb).
 `npm run package` builds the VSIX.
 The packaged extension includes the ws WebSocket transport dependency.

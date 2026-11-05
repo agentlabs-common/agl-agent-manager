@@ -75,3 +75,11 @@ with tempfile.TemporaryDirectory() as home:
  except RuntimeError:pass
  agent.run=lambda args,cwd=None:'[]';agent.delete_session(root,sid);assert not os.path.exists(file);assert os.path.exists(os.path.join(folder,other+'.jsonl'))
 print('Saved history checks passed')`;const r=await run('python3',['-c',code],{cwd:path.join(__dirname,'..')});assert.match(r.stdout,/checks passed/);});
+
+test('managed Claude listing includes descendants but excludes workspace-root and sibling agents',async()=>{const code=String.raw`import agent,json,tempfile,os
+with tempfile.TemporaryDirectory() as root:
+ managed=os.path.join(root,'.sessions','claude','task-id');os.makedirs(managed)
+ values=[dict(sessionId='11111111-2222-3333-4444-555555555555',cwd=root,kind='interactive'),dict(sessionId='22222222-2222-3333-4444-555555555555',cwd=managed,kind='interactive'),dict(sessionId='33333333-2222-3333-4444-555555555555',cwd=managed+'/repo/src',kind='interactive'),dict(sessionId='44444444-2222-3333-4444-555555555555',cwd=managed+'-other',kind='interactive')]
+ calls=[];agent.run=lambda args,cwd=None:calls.append(args) or json.dumps(values);agent.metadata=lambda sid:{};agent.saved_sessions=lambda cwd,descendants=False:[]
+ rows=agent.listing(root,[managed]);assert len(rows)==2;assert {row['cwd'] for row in rows}=={managed,managed+'/repo/src'};assert '--cwd' not in calls[0]
+print('Managed Claude checks passed')`;const r=await run('python3',['-c',code],{cwd:path.join(__dirname,'..')});assert.match(r.stdout,/checks passed/);});

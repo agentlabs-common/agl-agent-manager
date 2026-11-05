@@ -24,11 +24,11 @@ def metadata(sid):
             if stat[19]==str(value.get('procStart')):return value
         except (OSError,KeyError):pass
     return matches[0] if matches else {}
-def saved_sessions(cwd):
+def saved_sessions(cwd,descendants=False):
     root=os.path.realpath(cwd);projects=os.path.expanduser('~/.claude/projects');files=set();indexed={}
     for value in {root,cwd}:
         folder=os.path.join(projects,re.sub(r'[^a-zA-Z0-9]','-',value))
-        files.update(glob.glob(os.path.join(folder,'*.jsonl')))
+        files.update(glob.glob(os.path.join(folder+('*' if descendants else ''),'*.jsonl')))
     for index in glob.glob(os.path.join(projects,'*','sessions-index.json')):
         try:
             for item in json.load(open(index)).get('entries',[]):
@@ -55,26 +55,30 @@ def saved_sessions(cwd):
                 if not name and entry.get('type')=='user' and not entry.get('isMeta'):
                     content=(entry.get('message') or {}).get('content','')
                     if isinstance(content,str) and not content.lstrip().startswith('<'):name=content
-            if not actual or os.path.realpath(actual)!=root:continue
-            out.append(dict(sessionId=sid,id=sid,name=' '.join(name.split())[:100] or 'Claude · '+sid[:8],cwd=root,kind='saved',state='closed',live=False,updatedAt=stat.st_mtime,transcript=file))
+            if not actual or (os.path.commonpath([os.path.realpath(actual),root])!=root if descendants else os.path.realpath(actual)!=root):continue
+            out.append(dict(sessionId=sid,id=sid,name=' '.join(name.split())[:100] or 'Claude · '+sid[:8],cwd=os.path.realpath(actual),kind='saved',state='closed',live=False,updatedAt=stat.st_mtime,transcript=file))
         except (OSError,ValueError,TypeError,AttributeError):continue
     return out
 
-def listing(cwd):
+def listing(cwd,managed_roots=None):
     root=os.path.realpath(cwd)
-    rows=json.loads(run([os.environ.get('CLAUDE_AGENTS_CLI','claude'),'agents','--json','--all','--cwd',root],root))
+    rows=json.loads(run([os.environ.get('CLAUDE_AGENTS_CLI','claude'),'agents','--json','--all']+([] if managed_roots is not None else ['--cwd',root]),root))
+    allowed=[os.path.realpath(value) for value in managed_roots] if managed_roots is not None else None
     out=[]
     for item in rows:
-        if os.path.realpath(item.get('cwd',''))!=root:continue
+        actual=os.path.realpath(item.get('cwd',''))
+        if (not any(os.path.commonpath([actual,value])==value for value in allowed)) if allowed is not None else actual!=root:continue
         sid=item.get('sessionId','')
         if not UUID.fullmatch(sid):continue
         meta=metadata(sid)
-        item.update(pid=meta.get('pid'),procStart=meta.get('procStart'),tmux=meta.get('tmux'),cwd=root)
+        item.update(pid=meta.get('pid'),procStart=meta.get('procStart'),tmux=meta.get('tmux'),cwd=actual)
         item['live']=(process_alive(meta) if meta.get('pid') else True) if item.get('kind')=='interactive' else item.get('state') not in ('failed','stopped','completed','exited')
         if not item['live'] and item.get('kind')=='interactive':item['state']='closed'
         out.append(item)
     known={item['sessionId'] for item in out}
-    out.extend(item for item in saved_sessions(cwd) if item['sessionId'] not in known)
+    for value in (allowed if allowed is not None else [cwd]):
+        for item in saved_sessions(value,descendants=allowed is not None):
+            if item['sessionId'] not in known:out.append(item);known.add(item['sessionId'])
     return out
 def transcript(sid):
     if not UUID.fullmatch(sid):raise ValueError('Invalid Claude session ID')
@@ -194,6 +198,7 @@ def restart_yolo(cwd,sid):
 def main():
     action=sys.argv[1];cwd=sys.argv[2]
     if action=='list':result=listing(cwd)
+    elif action=='managed-list':result=listing(cwd,json.loads(sys.argv[3]))
     elif action=='voices':result=voices(sys.argv[3],json.loads(sys.argv[4]) if len(sys.argv)>4 else None)
     elif action=='prepare':result=prepare(cwd,sys.argv[3],len(sys.argv)>4 and sys.argv[4]=='true')
     elif action=='delete':result=delete_session(cwd,sys.argv[3])
