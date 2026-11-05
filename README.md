@@ -11,13 +11,19 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.7.2.vsix**.
+2. Select **claude-folder-agents-0.7.3.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.7.2.vsix --force`
+`code --install-extension claude-folder-agents-0.7.3.vsix --force`
+
+## Claude workspace trust
+
+Run **AGL Agent Manager: Trust This Workspace for Claude** from the Command Palette or the **…** menu in either agent sidebar. Then retry opening the agent. The action approves the canonical parent workspace, even when invoked from an agent folder. It merges the trust flag into Claude’s configuration on the machine running the agents; SSH workspaces update the remote configuration. Other configuration entries are kept. No agent is started or interrupted.
+
+Ordinary session subfolders inherit parent trust. Nested Git repositories and some project permissions can still require their own approval. This action does not enable YOLO mode.
 
 ## Codex sessions
 

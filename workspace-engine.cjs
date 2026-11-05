@@ -29,7 +29,36 @@ async function checkRemove(input){const root=await workspaceRoot(input.root);con
  for(const repo of meta.repositories){const real=await fs.realpath(repo.worktreePath);if(real!==repo.worktreePath)throw new Error('Worktree paths must not be symbolic links.');if(await git(repo.worktreePath,['branch','--show-current'],input)!==meta.branch)throw new Error(repo.name+' is no longer on its session branch.');const common=await git(repo.worktreePath,['rev-parse','--git-common-dir'],input);const canonical=await git(repo.canonicalPath,['rev-parse','--git-common-dir'],input);if(await fs.realpath(path.resolve(repo.worktreePath,common))!==await fs.realpath(path.resolve(repo.canonicalPath,canonical)))throw new Error('Worktree registration does not match '+repo.name);if(await git(repo.worktreePath,['status','--porcelain','--untracked-files=normal'],input))throw new Error(repo.name+' has uncommitted or untracked work.');}return meta;}
 async function remove(input){if(input.confirm!==true)throw new Error('Removal requires explicit confirmation.');const root=await workspaceRoot(input.root);return lock(root,async()=>{const meta=await checkRemove(input);const removed=[];try{for(const repo of meta.repositories){await git(repo.canonicalPath,['worktree','remove','--force',repo.worktreePath],input);removed.push(repo.name);}}catch(error){throw new Error('Removal stopped after '+(removed.join(', ')||'no repositories')+'. Remaining worktrees and session metadata were kept. '+error.message);}await fs.rm(meta.sessionRoot,{recursive:true});return{removed:true,sessionRoot:meta.sessionRoot,branchesKept:true};});}
 async function bind(input){const root=await workspaceRoot(input.root);word(input.provider,'agent provider');if(typeof input.sessionId!=='string'||!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(input.sessionId))throw new Error('Invalid native agent session ID.');return lock(root,async()=>{const meta=await inspectSession(root,input.agent,input.folder);const conversations=(meta.conversations||[]).filter(item=>item.provider!==input.provider||item.sessionId!==input.sessionId);conversations.push({provider:input.provider,sessionId:input.sessionId,linkedAt:new Date().toISOString()});meta.conversations=conversations;const file=path.join(meta.sessionRoot,META);await fs.writeFile(file+'.tmp',JSON.stringify(meta,null,2)+'\n',{flag:'wx'});await fs.rename(file+'.tmp',file);return meta;});}
-async function dispatch(input){if(!input||typeof input.root!=='string')throw new Error('A workspace root is required.');switch(input.action){case'discover':return{root:await workspaceRoot(input.root),repositories:await discover(input.root,input)};case'bind':return bind(input);case'list':return{root:await workspaceRoot(input.root),sessions:await list(input.root)};case'new':return create(input);case'add':return add(input);case'check-session':return inspectSession(await workspaceRoot(input.root),input.agent,input.folder);case'check-remove':return checkRemove(input);case'remove':return remove(input);default:throw new Error('Unknown workspace action.');}}
+async function trustClaude(input){
+ const root=await workspaceRoot(input.root);
+ const os=require('node:os');
+ if(root===await fs.realpath(os.homedir()))throw new Error('Choose a project workspace instead of your home directory.');
+ const configDir=process.env.CLAUDE_CONFIG_DIR?path.resolve(process.env.CLAUDE_CONFIG_DIR):os.homedir();
+ const file=path.join(configDir,'.claude.json');
+ await fs.mkdir(configDir,{recursive:true});
+ const lockFile=file+'.agl-trust-lock';
+ let guard;
+ try{guard=await fs.open(lockFile,'wx',0o600);}catch(error){if(error.code==='EEXIST')throw new Error('Another Claude trust update is active. Retry after it finishes.');throw error;}
+ let temporary;
+ try{
+  const stat=await fs.lstat(file).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
+  if(stat&&(!stat.isFile()||stat.isSymbolicLink()))throw new Error('Claude configuration must be a regular file.');
+  const before=stat?await fs.readFile(file,'utf8'):null;
+  let data;try{data=before===null?{}:JSON.parse(before);}catch{throw new Error('Claude configuration contains invalid JSON. Fix it before setting workspace trust.');}
+  const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+  if(!object(data)||(data.projects!==undefined&&!object(data.projects)))throw new Error('Invalid Claude project configuration.');
+  const projects=data.projects||{};
+  if(projects[root]!==undefined&&!object(projects[root]))throw new Error('Invalid Claude workspace configuration.');
+  if(projects[root]?.hasTrustDialogAccepted===true)return{root,trusted:true,changed:false};
+  data.projects={...projects,[root]:{...projects[root],hasTrustDialogAccepted:true}};
+  temporary=file+'.agl-'+require('node:crypto').randomUUID()+'.tmp';
+  await fs.writeFile(temporary,JSON.stringify(data,null,2)+'\n',{flag:'wx',mode:0o600});
+  if((await fs.readFile(file,'utf8').catch(error=>{if(error.code==='ENOENT')return null;throw error;}))!==before)throw new Error('Claude configuration changed during the update. Retry workspace trust.');
+  await fs.rename(temporary,file);temporary=undefined;
+  return{root,trusted:true,changed:true};
+ }finally{if(temporary)await fs.unlink(temporary).catch(()=>{});await guard.close();await fs.unlink(lockFile);}
+}
+async function dispatch(input){if(!input||typeof input.root!=='string')throw new Error('A workspace root is required.');switch(input.action){case'trust-claude':return trustClaude(input);case'discover':return{root:await workspaceRoot(input.root),repositories:await discover(input.root,input)};case'bind':return bind(input);case'list':return{root:await workspaceRoot(input.root),sessions:await list(input.root)};case'new':return create(input);case'add':return add(input);case'check-session':return inspectSession(await workspaceRoot(input.root),input.agent,input.folder);case'check-remove':return checkRemove(input);case'remove':return remove(input);default:throw new Error('Unknown workspace action.');}}
 async function main(args){const settings=JSON.parse(await fs.readFile(path.join(__dirname,'..',META),'utf8').catch(()=>'{}'));const gitPath=settings.gitPath;const[action,root,agent,name,id]=args;if(action==='add')return dispatch({action,root,gitPath,repositories:args.slice(2)});if(!action||!root)throw new Error('Usage: node session.cjs list|discover <root> | new <root> <agent> <name> [id] | add <session-root> <repo> [repo...] | check-remove|remove <root> <agent> <folder> [--confirm]');return dispatch({action,root,gitPath,agent,...(action==='new'?{name,id}:{folder:name}),confirm:args.includes('--confirm')});}
 module.exports={dispatch,discover,create,add,list,checkRemove,remove,workspaceRoot,isWord};
 if(globalThis.AGL_REQUEST||require.main===module){(globalThis.AGL_REQUEST?dispatch(globalThis.AGL_REQUEST):main(process.argv.slice(2))).then(value=>process.stdout.write(JSON.stringify(value)+'\n')).catch(error=>{process.stderr.write(error.message+'\n');process.exitCode=1;});}
