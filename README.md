@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.5.2.vsix**.
+2. Select **claude-folder-agents-0.5.3.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **Agent Sessions** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.5.2.vsix --force`
+`code --install-extension claude-folder-agents-0.5.3.vsix --force`
 
 ## Codex sessions
 
@@ -119,6 +119,7 @@ Disable it to preserve the original wording. Reconnect after changing Live setti
 Gemini is a prompt editor, not the coding agent. Claude or Codex performs the task.
 Reply readout uses the dedicated Gemini TTS API, preserving the selected Indian or other catalog voice.
 
+The connection icon stays green while connected; click it to disconnect. Live transcription appears above the composer on every tab.
 All action icons share one bottom toolbar. Pause and Resume share a position. Hover an icon for its label.
 **Mute mic** mutes input. **Review** places spoken prompts in the composer instead of submitting them.
 The microphone pauses during reply playback by default to prevent speaker echo.
