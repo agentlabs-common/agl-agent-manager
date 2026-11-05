@@ -2,7 +2,7 @@
   "name": "claude-folder-agents",
   "displayName": "AGL Agent Manager",
   "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {
@@ -119,7 +119,7 @@
       },
       {
         "command": "claudeFolderAgents.createWorkspace",
-        "title": "New Workspace Session",
+        "title": "New Agent",
         "category": "AGL Agent Manager",
         "icon": "$(new-folder)"
       },
@@ -131,13 +131,13 @@
       },
       {
         "command": "claudeFolderAgents.openWorkspace",
-        "title": "Open Workspace Session and Agent",
+        "title": "Open Agent",
         "category": "AGL Agent Manager",
         "icon": "$(folder-opened)"
       },
       {
         "command": "claudeFolderAgents.openWorkspaceFolder",
-        "title": "Open Session Folder",
+        "title": "Reveal Agent Folder",
         "category": "AGL Agent Manager",
         "icon": "$(folder)"
       },
@@ -149,7 +149,7 @@
       },
       {
         "command": "claudeFolderAgents.removeWorkspace",
-        "title": "Remove Workspace Session…",
+        "title": "Remove Agent Folder…",
         "category": "AGL Agent Manager",
         "icon": "$(trash)"
       },
@@ -210,7 +210,7 @@
         },
         {
           "id": "claudeFolderAgents.workspaces",
-          "name": "AGL Workspace Sessions"
+          "name": "AGL Agent Folders"
         },
         {
           "id": "claudeFolderAgents.skills",

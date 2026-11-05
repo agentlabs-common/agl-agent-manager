@@ -83,3 +83,5 @@ with tempfile.TemporaryDirectory() as root:
  calls=[];agent.run=lambda args,cwd=None:calls.append(args) or json.dumps(values);agent.metadata=lambda sid:{};agent.saved_sessions=lambda cwd,descendants=False:[]
  rows=agent.listing(root,[managed]);assert len(rows)==2;assert {row['cwd'] for row in rows}=={managed,managed+'/repo/src'};assert '--cwd' not in calls[0]
 print('Managed Claude checks passed')`;const r=await run('python3',['-c',code],{cwd:path.join(__dirname,'..')});assert.match(r.stdout,/checks passed/);});
+
+test('Claude subprocess starts in its session directory with a matching PWD environment',async()=>{const r=await run('python3',['-c',"import agent,json,os,sys,tempfile\nwith tempfile.TemporaryDirectory() as root:\n target=os.path.join(root,'session');os.mkdir(target)\n result=json.loads(agent.run([sys.executable,'-c',\"import os,json;print(json.dumps(dict(cwd=os.getcwd(),pwd=os.environ.get('PWD'))))\"],target))\n assert result['cwd']==os.path.realpath(target) and result['pwd']==os.path.realpath(target)\nprint('Session cwd checks passed')"],{cwd:path.join(__dirname,'..')});assert.match(r.stdout,/checks passed/);});

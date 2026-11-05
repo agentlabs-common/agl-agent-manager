@@ -6,6 +6,7 @@ VOICE=re.compile(r'(?<!`)<voice>((?:(?!<voice>).)*?)</voice>',re.S)
 VIEW=re.compile(r'^<view>[ \t]*\n(.*?)\n</view>[ \t]*$',re.S|re.M)
 def run(args,cwd=None):
     env=dict(os.environ)
+    if cwd is not None:env['PWD']=os.path.realpath(cwd)
     for key in ('CLAUDECODE','HC_TERMINAL_ID','HC_SCOPE'):env.pop(key,None)
     env['PATH']=os.path.expanduser('~/.local/bin')+os.pathsep+env.get('PATH','')
     p=subprocess.run(args,cwd=cwd,env=env,capture_output=True,text=True)

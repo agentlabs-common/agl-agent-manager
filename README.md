@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.7.1.vsix**.
+2. Select **claude-folder-agents-0.7.2.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.7.1.vsix --force`
+`code --install-extension claude-folder-agents-0.7.2.vsix --force`
 
 ## Codex sessions
 
@@ -40,24 +40,26 @@ The microphone and Gemini key stay on the local VS Code computer. Codex history 
 
 ## Workspace sessions
 
-**AGL Workspace Sessions** creates isolated folders of repository worktrees. No companion skill is needed or installed for workspace isolation.
+**AGL Agent Folders** creates isolated folders of repository worktrees. No companion skill is needed or installed for workspace isolation.
 
 1. Open the workspace containing the canonical repository clones.
-2. Select **+** in **AGL Agent Manager** or **AGL Workspace Sessions**.
-3. Choose Claude or Codex and enter a session name. There is no repository picker.
-4. The manager creates **.sessions/<agent>/<name>-<id>/** without worktrees or Git fetches.
-5. It opens that folder in a new VS Code window and starts the selected native agent and voice pane there.
+2. Select **+** in **AGL Agent Manager** or **AGL Agent Folders**.
+3. Choose Claude or Codex and enter an agent name, such as eb-dev. There is no repository picker or generated folder-name suffix.
+4. The manager creates **.sessions/<agent>/<name>/** without worktrees or Git fetches.
+5. It starts the selected native agent terminal and voice pane in the current VS Code window. The VS Code workspace stays open at the parent folder; only the agent process uses the new session folder as its working directory.
 6. The agent chooses repositories from the task and uses the bundled **.agl/workspace.cjs** helper to add their worktrees on demand.
 
 The default base is **main**, using **origin/main** when origin exists. Set **Workspace Base Branch** for another branch. When adding a worktree, its canonical clone must be clean and on that branch; canonical working trees are not switched, edited or built. The helper discovers repositories dynamically. Adding a worktree fetches the configured base branch and updates the session manifest. Failed additions roll back only newly created worktrees and preserve existing edits; retained paths are reported.
 
 Each new session contains **.agl-session.json**, **AGENTS.md**, **CLAUDE.md**, and the portable **.agl/workspace.cjs** helper. The instructions tell the agent how to discover repositories and run **add <session-root> <repo-name> [repo-name...]** with the recorded Node runtime. The manifest starts with an empty repository list and records worktrees as the agent adds them. The manifest records native conversation IDs after launch for later resume. Existing .sessions/<agent>/<folder> directories are recognized even without a manifest. Worktree metadata is discovered from their canonical clones; no skill or manual migration is needed.
 
+For example, VS Code remains open at **workspace-eb**, while Claude agent **eb-dev** runs in **workspace-eb/.sessions/claude/eb-dev/** and appears in that same window’s manager. Multiple agents remain visible there together. Existing older folders with ID suffixes remain supported and are not renamed.
+
 **Working directory and history are separate.** A new agent starts in the specific session folder. Its conversation history stays in the native agent data directory on the machine running it, rather than being copied into the workspace folder. Existing agents are not moved, stopped, or deleted. The agent list excludes agents outside .sessions, including those started directly in the canonical workspace. Closed histories remain visible while their workspace folder still exists.
 
-Select a workspace row to open its folder and start or resume its agent. **Choose Agent for Workspace Session** opens the other provider; **Open Session Folder** opens only the folder. Native launchers currently support Claude and Codex.
+Select an agent-folder row to start or resume its agent in the same window. **Reveal Agent Folder** expands the folder in the existing Explorer. Creating or reopening agents never calls Open Folder or opens another VS Code window. Native launchers currently support Claude and Codex.
 
-**Remove Workspace Session…** checks all repositories before removing the first worktree. Running agents, dirty/untracked work, symbolic-link escapes, and unexpected files outside the repositories block removal. After confirmation, clean worktrees and ignored build outputs are removed; branches and native conversation history are kept. A later Git failure reports partial removal and preserves the remaining worktrees and metadata. Project skills or notes in the session must be moved or removed before cleanup.
+**Remove Agent Folder…** checks all repositories before removing the first worktree. Running agents, dirty/untracked work, symbolic-link escapes, and unexpected files outside the repositories block removal. After confirmation, clean worktrees and ignored build outputs are removed; branches and native conversation history are kept. A later Git failure reports partial removal and preserves the remaining worktrees and metadata. Project skills or notes in the session must be moved or removed before cleanup.
 
 The workspace and skill engines use Node APIs and Git argument arrays, without Bash. SSH jobs use Node on PATH or VS Code Server’s bundled Node; Windows SSH runtime discovery uses PowerShell and the Remote SSH platform setting. The existing microphone and playback requirements are separate below. Linux and real SSH integration were tested; Windows and macOS host runs have not yet been performed.
 
@@ -111,7 +113,7 @@ The extension reports this limitation and prevents a duplicate resume.
 
 ## YOLO mode
 
-Click the rocket button in **AGL Agent Manager**, or run **AGL Agent Manager: New Claude Session (YOLO)**.
+Run **AGL Agent Manager: New Agent Session (YOLO)** to create a named agent folder and start it in the current window.
 This starts Claude with `--dangerously-skip-permissions`, which skips all permission checks.
 Enable **AGL Agent Manager: Yolo Mode** to use it by default for new sessions and resumed inactive interactive sessions.
 It works locally and over SSH. To change an existing session, right-click it and select **Restart Session in YOLO Mode**.
