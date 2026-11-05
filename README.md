@@ -1,4 +1,4 @@
-# Agent Sessions & Voice
+# AGL Agent Manager
 
 A standalone VS Code extension for native Claude Code and Codex sessions.
 It shows sessions whose working directory equals the current folder.
@@ -11,29 +11,29 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.6.0.vsix**.
+2. Select **claude-folder-agents-0.6.1.vsix**.
 3. Run **Developer: Reload Window**.
-4. Expand **Agent Sessions** in Explorer.
+4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.6.0.vsix --force`
+`code --install-extension claude-folder-agents-0.6.1.vsix --force`
 
 ## Codex sessions
 
-Claude and Codex appear together in **Agent Sessions**, limited to the exact selected folder.
+Claude and Codex appear together in **AGL Agent Manager**, limited to the exact selected folder.
 **Providers** in extension settings can show either provider alone. A missing provider does not hide sessions from the other one.
 
 Open a Codex row to launch `codex resume <thread-id>` with the shared Gemini voice pane. Repeated clicks reuse the terminal.
 The extension reads Codex daemon history without sending prompts, forking threads, or changing approval policies. Native Codex handles terminal input and approvals.
 Completed Codex replies use the same full-message TTS, Indian voice catalog, dictation, and Gemini Live prompt editing as Claude.
 
-Use **+ → Codex**, **Agent Sessions: New Codex Session**, or **New Codex Session (YOLO)** to create a session.
+Use **+ → Codex**, **AGL Agent Manager: New Codex Session**, or **New Codex Session (YOLO)** to create a session.
 Use **Restart Session in YOLO Mode** to interrupt the selected active turn and resume the same session with YOLO permissions. Ordinary opening attaches to a running session without interrupting it.
 Codex YOLO uses `--dangerously-bypass-approvals-and-sandbox`.
 
 The local or SSH host needs Codex with the shared daemon API (verified with 0.166.0).
-New Codex sessions start the daemon when necessary. **Agent Sessions: Start Codex Daemon** starts it explicitly for discovery.
+New Codex sessions start the daemon when necessary. **AGL Agent Manager: Start Codex Daemon** starts it explicitly for discovery.
 The microphone and Gemini key stay on the local VS Code computer. Codex history and native terminal traffic use SSH for remote folders.
 
 [Official Codex app-server documentation](https://developers.openai.com/codex/app-server).
@@ -53,8 +53,8 @@ Opening an archived Codex conversation restores that same thread before opening 
 ## Folder scope
 
 The default scope is the active editor's workspace folder, or the first open folder.
-Right-click a folder and select **Show Agent Sessions** to use that exact directory.
-**Agent Sessions: Show Sessions in Workspace Folders** restores the default scope.
+Right-click a folder and select **Show AGL Agent Manager** to use that exact directory.
+**AGL Agent Manager: Show Sessions in Workspace Folders** restores the default scope.
 Symbolic links resolve to the same directory.
 The list does not include child directories or all agents on the computer.
 
@@ -73,9 +73,9 @@ The extension reports this limitation and prevents a duplicate resume.
 
 ## YOLO mode
 
-Click the rocket button in **Claude Sessions**, or run **Agent Sessions: New Claude Session (YOLO)**.
+Click the rocket button in **AGL Agent Manager**, or run **AGL Agent Manager: New Claude Session (YOLO)**.
 This starts Claude with `--dangerously-skip-permissions`, which skips all permission checks.
-Enable **Claude Folder Agents: Yolo Mode** to use it by default for new sessions and resumed inactive interactive sessions.
+Enable **AGL Agent Manager: Yolo Mode** to use it by default for new sessions and resumed inactive interactive sessions.
 It works locally and over SSH. To change an existing session, right-click it and select **Restart Session in YOLO Mode**.
 This interrupts its current task, stops the existing process, and resumes the same conversation with permission checks skipped.
 The extension verifies the folder and waits for the previous process to stop before resuming. Ordinary clicks still attach without changing its mode.
@@ -99,7 +99,7 @@ Closing the voice pane stops its microphone and connection.
 
 ## Gemini configuration
 
-Click **⚙** in the voice pane or Claude Sessions toolbar, or run **Agent Sessions: Configure Gemini Voice**.
+Click **⚙** in the voice pane or AGL Agent Manager toolbar, or run **AGL Agent Manager: Configure Gemini Voice**.
 Choose the TTS model, one of 30 voices or a custom voice ID, speaking style, Live model, pause timing, prompt polishing, microphone behavior, or Python executable.
 For Indian female voices, choose **TTS voice → Indian English · Female** or **Hindi · Female**.
 **Browse voice catalog…** offers Indian languages and gender filters. The catalog uses the voices available to your Gemini API key.
@@ -146,7 +146,7 @@ Speech starts after the agent publishes reply text, so the agent’s own respons
 
 ## Remote sessions
 
-Run **Agent Sessions: Open Remote Working Directory over SSH**.
+Run **AGL Agent Manager: Open Remote Working Directory over SSH**.
 Enter your SSH host and an absolute working directory on that host.
 The list then shows only sessions in that exact remote directory.
 **Show Sessions in Workspace Folders** returns to the local workspace.
@@ -169,7 +169,7 @@ A phone or browser client does not stream its microphone to the extension.
 - For voice: arecord, aplay, a Gemini API key, and a Python environment with websockets.
 - For live interactive tmux sessions: tmux.
 
-**Claude Folder Agents: Claude Path** sets the local CLI executable.
+**AGL Agent Manager: Claude Path** sets the local CLI executable.
 **Show Saved** includes completed native background sessions.
 
 ## Development

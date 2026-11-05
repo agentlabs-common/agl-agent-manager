@@ -1,8 +1,8 @@
 {
   "name": "claude-folder-agents",
-  "displayName": "Agent Sessions & Voice",
+  "displayName": "AGL Agent Manager",
   "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {
@@ -31,88 +31,90 @@
       {
         "command": "claudeFolderAgents.open",
         "title": "Open Session with Voice",
-        "category": "Agent Sessions"
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.refresh",
-        "title": "Refresh Agent Sessions",
-        "icon": "$(refresh)"
+        "title": "Refresh Sessions",
+        "icon": "$(refresh)",
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.new",
         "title": "New Agent Session",
-        "icon": "$(add)"
+        "icon": "$(add)",
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.show",
-        "title": "Show Agent Sessions",
-        "category": "Agent Sessions"
+        "title": "Show AGL Agent Manager",
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.workspace",
         "title": "Show Sessions in Workspace Folders",
-        "category": "Agent Sessions"
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.remote",
         "title": "Open Remote Working Directory over SSH",
-        "category": "Agent Sessions"
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.newYolo",
         "title": "New Agent Session (YOLO)",
-        "category": "Agent Sessions",
+        "category": "AGL Agent Manager",
         "icon": "$(rocket)"
       },
       {
         "command": "claudeFolderAgents.restartYolo",
         "title": "Restart Session in YOLO Mode",
-        "category": "Agent Sessions",
+        "category": "AGL Agent Manager",
         "icon": "$(rocket)"
       },
       {
         "command": "claudeFolderAgents.configureGemini",
         "title": "Configure Gemini Voice",
-        "category": "Agent Sessions",
+        "category": "AGL Agent Manager",
         "icon": "$(gear)"
       },
       {
         "command": "claudeFolderAgents.newCodex",
         "title": "New Codex Session",
-        "category": "Agent Sessions"
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.newCodexYolo",
         "title": "New Codex Session (YOLO)",
-        "category": "Agent Sessions"
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.startCodexDaemon",
         "title": "Start Codex Daemon",
-        "category": "Agent Sessions"
+        "category": "AGL Agent Manager"
       },
       {
         "command": "claudeFolderAgents.filterSessions",
         "title": "Filter Sessions",
-        "category": "Agent Sessions",
+        "category": "AGL Agent Manager",
         "icon": "$(filter)"
       },
       {
         "command": "claudeFolderAgents.hideSession",
         "title": "Hide Session",
-        "category": "Agent Sessions",
+        "category": "AGL Agent Manager",
         "icon": "$(eye-closed)"
       },
       {
         "command": "claudeFolderAgents.restoreSession",
         "title": "Restore Hidden Session",
-        "category": "Agent Sessions",
+        "category": "AGL Agent Manager",
         "icon": "$(eye)"
       },
       {
         "command": "claudeFolderAgents.deleteSession",
         "title": "Delete Closed Session…",
-        "category": "Agent Sessions",
+        "category": "AGL Agent Manager",
         "icon": "$(trash)"
       }
     ],
@@ -120,7 +122,7 @@
       "explorer": [
         {
           "id": "claudeFolderAgents.sessions",
-          "name": "Agent Sessions"
+          "name": "AGL Agent Manager"
         }
       ]
     },
@@ -183,7 +185,7 @@
       ]
     },
     "configuration": {
-      "title": "Agent Sessions & Voice",
+      "title": "AGL Agent Manager",
       "properties": {
         "claudeFolderAgents.claudePath": {
           "type": "string",

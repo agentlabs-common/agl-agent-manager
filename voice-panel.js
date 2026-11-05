@@ -40,7 +40,7 @@ const button=(id,label,icon,attrs='')=>'<button id="'+id+'" class="icon-button'+
 const symbols='<svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><defs>'+Object.entries(paths).map(([id,shape])=>'<symbol id="icon-'+id+'" viewBox="0 0 24 24">'+shape+'</symbol>').join('')+'</defs></svg>';
 
 return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${source}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${style}"><title>Claude Voice</title></head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${source}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${style}"><title>AGL Agent Manager · Voice</title></head>
 <body>${symbols}<header><strong id="name">Agent</strong></header>
 <nav aria-label="Voice views"><button class="tab active" data-tab="voices" aria-pressed="true">Voices</button><button class="tab" data-tab="views" aria-pressed="false">Notes</button><button class="tab" data-tab="live" aria-pressed="false">Gemini Live</button></nav>
 <main><section id="voices" aria-label="Agent replies"><p class="empty">Waiting for this agent’s replies…</p></section><section id="views" aria-label="Agent notes" hidden></section><section id="live" aria-label="Gemini Live" hidden><div id="captions"></div></section></main>

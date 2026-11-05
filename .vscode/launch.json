@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run Claude Sessions & Voice",
+      "name": "Run AGL Agent Manager",
       "type": "extensionHost",
       "request": "launch",
       "args": [
