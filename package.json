@@ -207,6 +207,12 @@
         "title": "Trust This Workspace for Claude",
         "category": "AGL Agent Manager",
         "icon": "$(shield)"
+      },
+      {
+        "command": "claudeFolderAgents.openStatusPage",
+        "title": "Open Status Page",
+        "icon": "$(pulse)",
+        "category": "AGL Agent Manager"
       }
     ],
     "views": {
@@ -227,6 +233,11 @@
     },
     "menus": {
       "view/title": [
+        {
+          "command": "claudeFolderAgents.openStatusPage",
+          "when": "view == claudeFolderAgents.sessions || view == claudeFolderAgents.workspaces",
+          "group": "navigation@0"
+        },
         {
           "command": "claudeFolderAgents.createWorkspace",
           "when": "view == claudeFolderAgents.sessions",
@@ -475,6 +486,7 @@
   },
   "homepage": "https://github.com/agentlabs-common/claude-folder-agents#readme",
   "dependencies": {
+    "marked": "^15.0.12",
     "ws": "^8.22.1"
   }
 }

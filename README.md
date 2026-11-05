@@ -88,6 +88,16 @@ The **Skills** tab in a Claude session’s Voice pane lists the skills that agen
 
 Source discovery follows [Codex skills](https://developers.openai.com/codex/skills) and [Claude skills](https://code.claude.com/docs/en/skills). Session instructions follow [Codex AGENTS.md](https://developers.openai.com/codex/guides/agents-md) and [Claude memory](https://code.claude.com/docs/en/memory).
 
+## Status page and session notes
+
+Each session keeps notes in `.agl/`: `STATUS.md` (a short snapshot with a state and a headline), `FACTS.md` (dated, durable facts) and optional `pages/*.md`. The bundled **agl-notes** skill teaches agents the format; the extension installs it into `~/.claude/skills` and `~/.agents/skills` on start and never replaces a skill of the same name that it did not install. New sessions’ `AGENTS.md` points to it.
+
+- **Open Status Page** (pulse icon in **AGL Agent Manager** or **AGL Agent Folders**) opens a local page in your browser. It listens on 127.0.0.1 only, and every URL carries a random token. The home page lists every session in the workspace, needs-you first, with stale and open-review flags.
+- Each session page shows Status, Facts and its pages. **Save comment**, **Yes** and **No** only record a review in `.agl/reviews.json`; nothing is sent to the agent. Tell the agent when you have reviewed; it answers each review, and you select **Confirm reviewed** to close it.
+- The **Status** tab in the Voice pane shows the same status and facts for that agent.
+
+Local workspaces only for now; SSH sessions are not shown. Notes in `.agl/` block **Remove Agent Folder…** until you move or delete them.
+
 ## Closed and hidden sessions
 
 The default **All sessions** filter includes running sessions, saved Claude conversations, and closed or archived Codex conversations under existing .sessions workspace folders. The extension cannot recover history already removed by the agent.
