@@ -1,0 +1,42 @@
+const{test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs/promises');const path=require('node:path');const os=require('node:os');const engine=require('../skills-engine.cjs');
+async function skill(dir,name,description='Does '+name+'.'){await fs.mkdir(path.join(dir,name),{recursive:true});await fs.writeFile(path.join(dir,name,'SKILL.md'),'---\nname: '+name+'\ndescription: '+description+'\n---\nBody');}
+test('per-agent skill switches list layered sources and write only the agent settings.local.json',async()=>{const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-agent-skills-')));try{
+ const home=path.join(base,'home'),workspace=path.join(base,'ws'),agent=path.join(workspace,'.sessions','claude','one'),other=path.join(workspace,'.sessions','claude','two');
+ await skill(path.join(agent,'.claude','skills'),'local-one');await skill(path.join(workspace,'.claude','skills'),'shared-ws');await skill(path.join(home,'.claude','skills'),'personal-one');await fs.mkdir(other,{recursive:true});
+ const install=path.join(home,'plugin-cache','demo');await skill(path.join(install,'skills'),'plug-skill');await fs.mkdir(path.join(home,'.claude','plugins'),{recursive:true});
+ await fs.writeFile(path.join(home,'.claude','plugins','installed_plugins.json'),JSON.stringify({version:2,plugins:{'demo@market':[{scope:'user',installPath:install}],'elsewhere@market':[{scope:'project',projectPath:path.join(base,'unrelated'),installPath:install}]}}));
+ await fs.writeFile(path.join(home,'.claude','settings.json'),JSON.stringify({enabledPlugins:{'demo@market':true},skillOverrides:{'personal-one':'off'}}));
+ await fs.mkdir(path.join(agent,'.claude'),{recursive:true});await fs.writeFile(path.join(agent,'.claude','settings.local.json'),JSON.stringify({permissions:{allow:['Bash(ls)']}}));
+ const call=(root,values)=>engine.dispatch({root,...values},home);
+ let result=await call(agent,{action:'skills-agent-list'});
+ assert.deepEqual(result.groups.map(g=>g.label),['This agent','Inherited · ws','Personal','Plugin · demo@market']);
+ const find=(r,name)=>r.groups.flatMap(g=>g.skills).find(s=>s.name===name);
+ assert.equal(find(result,'personal-one').on,false);assert.equal(find(result,'shared-ws').on,true);assert.equal(result.groups.at(-1).on,true);
+ result=await call(agent,{action:'skills-agent-set',kind:'skill',name:'shared-ws',on:false});assert.equal(find(result,'shared-ws').on,false);
+ result=await call(agent,{action:'skills-agent-set',kind:'skill',name:'personal-one',on:true});assert.equal(find(result,'personal-one').on,true);
+ result=await call(agent,{action:'skills-agent-set',kind:'plugin',name:'demo@market',on:false});assert.equal(result.groups.at(-1).on,false);
+ const saved=JSON.parse(await fs.readFile(path.join(agent,'.claude','settings.local.json'),'utf8'));
+ assert.deepEqual(saved,{permissions:{allow:['Bash(ls)']},skillOverrides:{'shared-ws':'off','personal-one':'on'},enabledPlugins:{'demo@market':false}});
+ const sibling=await call(other,{action:'skills-agent-list'});assert.equal(find(sibling,'shared-ws').on,true);assert.equal(sibling.groups.at(-1).on,true);
+ await call(agent,{action:'skills-agent-set',kind:'skill',name:'shared-ws',on:true});await call(agent,{action:'skills-agent-set',kind:'skill',name:'personal-one',on:false});await call(agent,{action:'skills-agent-set',kind:'plugin',name:'demo@market',on:true});
+ assert.deepEqual(JSON.parse(await fs.readFile(path.join(agent,'.claude','settings.local.json'),'utf8')),{permissions:{allow:['Bash(ls)']}});
+ await assert.rejects(call(agent,{action:'skills-agent-set',kind:'skill',name:'../x',on:false}),/Invalid skill name/);
+ await fs.writeFile(path.join(agent,'.claude','settings.local.json'),'{broken');await assert.rejects(call(agent,{action:'skills-agent-set',kind:'skill',name:'shared-ws',on:false}),/Cannot read/);
+ assert.equal(await fs.readFile(path.join(agent,'.claude','settings.local.json'),'utf8'),'{broken');
+}finally{await fs.rm(base,{recursive:true,force:true});}});
+test('voice panel Skills tab lists and switches skills for its own agent folder only',async()=>{const vm=require('node:vm');const runs=[];const module={exports:{}};class WorkspaceService{constructor(backend){this.backend=backend;}async run(action,values){runs.push({action,...values});return{groups:[{kind:'skills',label:'Personal',skills:[{name:'a',on:true}]}]};}}
+ vm.runInNewContext(require('node:fs').readFileSync(path.join(__dirname,'../voice-panel.js'),'utf8'),{module,require:name=>name==='vscode'?{workspace:{isTrusted:true}}:name==='./live-client'?{LiveClient:class{}}:name==='./workspace-service'?{WorkspaceService}:require(name),setInterval,clearInterval,setTimeout,Set});
+ const panel=Object.create(module.exports.VoicePanel.prototype);const posts=[];panel.post=async m=>posts.push(m);panel.backend={};panel.session={provider:'claude',cwd:'/ws/.sessions/claude/one',sessionId:'sid'};
+ await panel.handle({type:'skills'});assert.equal(runs[0].action,'skills-agent-list');assert.equal(runs[0].root,'/ws/.sessions/claude/one');assert.equal(posts.at(-1).changed,false);
+ await panel.handle({type:'skillSet',kind:'skill',name:'a',on:false,root:'/elsewhere'});assert.deepEqual(runs[1],{action:'skills-agent-set',root:'/ws/.sessions/claude/one',kind:'skill',name:'a',on:false});assert.equal(posts.at(-1).changed,true);
+ await panel.handle({type:'skillSet',kind:'bogus',name:'a',on:false});assert.equal(runs.length,2);
+ panel.session={provider:'codex',cwd:'/x'};await panel.handle({type:'skills'});assert.equal(posts.at(-1).unsupported,true);assert.equal(runs.length,2);});
+test('Skills tab renders groups and sends a switch change',()=>{const vm=require('node:vm');const elements=new Map(),messages=[];let receive;
+ const make=tag=>({tag,children:[],hidden:false,dataset:{},addEventListener(type,fn){this[type]=fn;},append(...nodes){this.children.push(...nodes);},replaceChildren(){this.children=[];},classList:{toggle(){}},setAttribute(name,value){this.attributes??={};this.attributes[name]=value;}});
+ const el=id=>{if(!elements.has(id))elements.set(id,make('div'));return elements.get(id);};
+ vm.runInNewContext(require('node:fs').readFileSync(path.join(__dirname,'../media/voice.js'),'utf8'),{acquireVsCodeApi:()=>({postMessage:m=>messages.push(m)}),document:{getElementById:el,createElement:make,querySelectorAll:()=>[]},window:{addEventListener:(type,fn)=>{receive=fn;}},Date});
+ receive({data:{type:'skills',changed:false,groups:[{kind:'skills',label:'Personal',skills:[{name:'alpha',on:true,description:'A.'}]},{kind:'plugin',id:'demo@m',label:'Plugin · demo@m',on:false,skills:[{name:'p1'},{name:'p2'}]}]}});
+ const [note,personal,plugin]=el('skills').children;assert.match(note.textContent,/this agent only/);
+ const box=personal.children[1].children[0];assert.equal(box.checked,true);box.checked=false;box.change();assert.deepEqual({...messages.at(-1)},{type:'skillSet',kind:'skill',name:'alpha',on:false});
+ assert.equal(plugin.children[1].textContent,'p1, p2');const pbox=plugin.children[0].children[0];pbox.checked=true;pbox.change();assert.deepEqual({...messages.at(-1)},{type:'skillSet',kind:'plugin',name:'demo@m',on:true});
+ receive({data:{type:'skills',unsupported:true}});assert.match(el('skills').children[0].textContent,/Claude sessions only/);});

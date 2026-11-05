@@ -82,6 +82,10 @@ Select the **Manage Skills** book icon in the main manager toolbar, or run **AGL
 
 Save or discard unsaved skill edits before disabling or removing a skill. Changes affect future skill discovery; a running agent may need to reload or restart. Project skills are scoped to the selected workspace folder; personal skills apply on that host. Skills supplied by plugin catalogs and GitHub installation are not managed by this first GUI version.
 
+### Skills for one agent
+
+The **Skills** tab in a Claude session’s Voice pane lists the skills that agent can load: skills in its own folder, skills inherited from parent folders, personal skills and installed plugins. Switches apply to that agent only. They are saved as `skillOverrides` (skills) and `enabledPlugins` (plugins) in the agent folder’s `.claude/settings.local.json`, the same file Claude Code’s `/skills` menu writes; other settings in that file are kept. Plugins switch as a whole, because Claude Code has no per-folder switch for a single plugin skill. Restart the agent to apply a change. Codex sessions show the tab without switches.
+
 Source discovery follows [Codex skills](https://developers.openai.com/codex/skills) and [Claude skills](https://code.claude.com/docs/en/skills). Session instructions follow [Codex AGENTS.md](https://developers.openai.com/codex/guides/agents-md) and [Claude memory](https://code.claude.com/docs/en/memory).
 
 ## Closed and hidden sessions
