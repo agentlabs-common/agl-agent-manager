@@ -2,7 +2,7 @@
   "name": "claude-folder-agents",
   "displayName": "Agent Sessions & Voice",
   "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {
@@ -90,6 +90,30 @@
         "command": "claudeFolderAgents.startCodexDaemon",
         "title": "Start Codex Daemon",
         "category": "Agent Sessions"
+      },
+      {
+        "command": "claudeFolderAgents.filterSessions",
+        "title": "Filter Sessions",
+        "category": "Agent Sessions",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "claudeFolderAgents.hideSession",
+        "title": "Hide Session",
+        "category": "Agent Sessions",
+        "icon": "$(eye-closed)"
+      },
+      {
+        "command": "claudeFolderAgents.restoreSession",
+        "title": "Restore Hidden Session",
+        "category": "Agent Sessions",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "claudeFolderAgents.deleteSession",
+        "title": "Delete Closed Session…",
+        "category": "Agent Sessions",
+        "icon": "$(trash)"
       }
     ],
     "views": {
@@ -121,20 +145,40 @@
           "command": "claudeFolderAgents.configureGemini",
           "when": "view == claudeFolderAgents.sessions",
           "group": "navigation@4"
+        },
+        {
+          "command": "claudeFolderAgents.filterSessions",
+          "when": "view == claudeFolderAgents.sessions",
+          "group": "navigation@2.5"
         }
       ],
       "explorer/context": [
         {
           "command": "claudeFolderAgents.show",
-          "when": "explorerResourceIsFolder && resourceScheme == file",
+          "when": "explorerResourceIsFolder && (resourceScheme == file || resourceScheme == vscode-remote)",
           "group": "navigation@91"
         }
       ],
       "view/item/context": [
         {
           "command": "claudeFolderAgents.restartYolo",
-          "when": "view == claudeFolderAgents.sessions && viewItem == claudeSession",
-          "group": "claude@1"
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession/",
+          "group": "session@1"
+        },
+        {
+          "command": "claudeFolderAgents.hideSession",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Running|Closed)$/",
+          "group": "session@2"
+        },
+        {
+          "command": "claudeFolderAgents.restoreSession",
+          "when": "view == claudeFolderAgents.sessions && viewItem == agentSessionHidden",
+          "group": "session@2"
+        },
+        {
+          "command": "claudeFolderAgents.deleteSession",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Closed|Hidden)$/",
+          "group": "session@3"
         }
       ]
     },

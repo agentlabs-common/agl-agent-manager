@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.5.3.vsix**.
+2. Select **claude-folder-agents-0.6.0.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **Agent Sessions** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.5.3.vsix --force`
+`code --install-extension claude-folder-agents-0.6.0.vsix --force`
 
 ## Codex sessions
 
@@ -37,6 +37,18 @@ New Codex sessions start the daemon when necessary. **Agent Sessions: Start Code
 The microphone and Gemini key stay on the local VS Code computer. Codex history and native terminal traffic use SSH for remote folders.
 
 [Official Codex app-server documentation](https://developers.openai.com/codex/app-server).
+
+## Closed and hidden sessions
+
+The default **All sessions** filter includes running sessions, saved Claude conversations, and closed or archived Codex conversations in the exact current directory. The extension cannot recover history already removed by the agent.
+Use the **Filter Sessions** funnel in the view title to choose **All**, **Running**, **Closed**, or **Hidden** sessions.
+
+Right-click a session for **Hide Session**. This changes only this extension's view and keeps the conversation and any running task.
+Choose **Hidden sessions**, then right-click **Restore Hidden Session** to show it again.
+
+**Delete Closed Session…** permanently removes the selected conversation after confirmation. Running sessions must be closed first.
+For Codex, native deletion also removes spawned child sessions. For Claude background agents, native deletion may remove its managed worktree; the confirmation explains this before deletion. Saved interactive Claude conversations delete their transcripts while keeping project files.
+Opening an archived Codex conversation restores that same thread before opening its terminal.
 
 ## Folder scope
 
@@ -141,7 +153,8 @@ The list then shows only sessions in that exact remote directory.
 
 The extension sends its Python helper over SSH stdin without installing it remotely.
 The remote machine needs Python 3, native Claude Code, and working SSH authentication.
-Terminal attachment also uses SSH.
+Terminal attachment also uses SSH, launched explicitly on the local computer to avoid a second SSH connection from the remote workspace.
+The extension decodes VS Code SSH connection details and uses the configured **Remote.SSH: Path** and **Remote.SSH: Config File**, including custom user and port settings.
 The microphone and speech playback run on this computer.
 Remote transcript summaries travel over SSH to the voice pane.
 No global remote-machine or agent list is shown.

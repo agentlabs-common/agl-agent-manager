@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Native Claude session discovery, also executable over SSH via stdin."""
-import glob,json,os,re,signal,subprocess,sys,time
+import glob,json,os,re,shutil,signal,subprocess,sys,time
 UUID=re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$',re.I)
 VOICE=re.compile(r'(?<!`)<voice>((?:(?!<voice>).)*?)</voice>',re.S)
 VIEW=re.compile(r'^<view>[ \t]*\n(.*?)\n</view>[ \t]*$',re.S|re.M)
@@ -24,6 +24,42 @@ def metadata(sid):
             if stat[19]==str(value.get('procStart')):return value
         except (OSError,KeyError):pass
     return matches[0] if matches else {}
+def saved_sessions(cwd):
+    root=os.path.realpath(cwd);projects=os.path.expanduser('~/.claude/projects');files=set();indexed={}
+    for value in {root,cwd}:
+        folder=os.path.join(projects,re.sub(r'[^a-zA-Z0-9]','-',value))
+        files.update(glob.glob(os.path.join(folder,'*.jsonl')))
+    for index in glob.glob(os.path.join(projects,'*','sessions-index.json')):
+        try:
+            for item in json.load(open(index)).get('entries',[]):
+                if os.path.realpath(item.get('projectPath') or item.get('cwd') or '')!=root:continue
+                sid=item.get('sessionId','');file=os.path.join(os.path.dirname(index),sid+'.jsonl')
+                if UUID.fullmatch(sid):files.add(file);indexed[sid]=item
+        except (OSError,ValueError,TypeError):pass
+    out=[]
+    for file in files:
+        sid=os.path.basename(file)[:-6]
+        if not UUID.fullmatch(sid) or os.path.islink(file):continue
+        try:
+            stat=os.stat(file)
+            with open(file,'rb') as stream:
+                head=stream.read(1024*1024);stream.seek(max(len(head),stat.st_size-128*1024));tail=stream.read()
+            info=indexed.get(sid,{})
+            actual=info.get('projectPath') or info.get('cwd');name=info.get('customTitle') or info.get('summary') or info.get('firstPrompt') or ''
+            for line in (head+b'\n'+tail).splitlines():
+                try:entry=json.loads(line)
+                except (ValueError,UnicodeDecodeError):continue
+                if not isinstance(entry,dict):continue
+                actual=actual or entry.get('cwd')
+                if entry.get('type')=='custom-title':name=entry.get('customTitle') or name
+                if not name and entry.get('type')=='user' and not entry.get('isMeta'):
+                    content=(entry.get('message') or {}).get('content','')
+                    if isinstance(content,str) and not content.lstrip().startswith('<'):name=content
+            if not actual or os.path.realpath(actual)!=root:continue
+            out.append(dict(sessionId=sid,id=sid,name=' '.join(name.split())[:100] or 'Claude · '+sid[:8],cwd=root,kind='saved',state='closed',live=False,updatedAt=stat.st_mtime,transcript=file))
+        except (OSError,ValueError,TypeError,AttributeError):continue
+    return out
+
 def listing(cwd):
     root=os.path.realpath(cwd)
     rows=json.loads(run([os.environ.get('CLAUDE_AGENTS_CLI','claude'),'agents','--json','--all','--cwd',root],root))
@@ -34,8 +70,11 @@ def listing(cwd):
         if not UUID.fullmatch(sid):continue
         meta=metadata(sid)
         item.update(pid=meta.get('pid'),procStart=meta.get('procStart'),tmux=meta.get('tmux'),cwd=root)
-        item['live']=item.get('kind')=='interactive' or item.get('state') not in ('failed','stopped','completed','exited')
+        item['live']=(process_alive(meta) if meta.get('pid') else True) if item.get('kind')=='interactive' else item.get('state') not in ('failed','stopped','completed','exited')
+        if not item['live'] and item.get('kind')=='interactive':item['state']='closed'
         out.append(item)
+    known={item['sessionId'] for item in out}
+    out.extend(item for item in saved_sessions(cwd) if item['sessionId'] not in known)
     return out
 def transcript(sid):
     if not UUID.fullmatch(sid):raise ValueError('Invalid Claude session ID')
@@ -118,6 +157,19 @@ def prepare(cwd,sid,yolo=False):
         run(['tmux','select-window','-t',group+':'+window])
         return dict(session=session,argv=['tmux','attach-session','-t',group],pane=pane)
     return dict(session=session,argv=[cli,'--resume',sid]+(['--dangerously-skip-permissions'] if yolo else []))
+def delete_session(cwd,sid):
+    if not UUID.fullmatch(sid):raise ValueError('Invalid Claude session ID')
+    session=next((row for row in listing(cwd) if row['sessionId']==sid),None)
+    if not session:raise RuntimeError('This session is not in the current working directory.')
+    if session.get('live') or process_alive(metadata(sid)):raise RuntimeError('Stop this running Claude session before deleting it.')
+    if session.get('kind')=='background':run([os.environ.get('CLAUDE_AGENTS_CLI','claude'),'rm',session['id']],cwd)
+    for item in saved_sessions(cwd):
+        if item['sessionId']!=sid:continue
+        file=item['transcript'];os.unlink(file)
+        directory=os.path.join(os.path.dirname(file),sid)
+        if os.path.isdir(directory) and not os.path.islink(directory):shutil.rmtree(directory)
+    return dict(deleted=True)
+
 def process_alive(session):
     try:
         stat=open('/proc/%s/stat'%int(session['pid'])).read().rsplit(')',1)[1].split()
@@ -144,6 +196,7 @@ def main():
     if action=='list':result=listing(cwd)
     elif action=='voices':result=voices(sys.argv[3],json.loads(sys.argv[4]) if len(sys.argv)>4 else None)
     elif action=='prepare':result=prepare(cwd,sys.argv[3],len(sys.argv)>4 and sys.argv[4]=='true')
+    elif action=='delete':result=delete_session(cwd,sys.argv[3])
     elif action=='restart-yolo':result=restart_yolo(cwd,sys.argv[3])
     elif action=='new':
         import uuid

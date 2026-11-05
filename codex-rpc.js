@@ -1,10 +1,11 @@
 const{spawn}=require('node:child_process');const{Agent}=require('node:http');const{Duplex}=require('node:stream');const{EventEmitter}=require('node:events');const WebSocket=require('ws');const{userEnvironment,quote}=require('./backend');
+const{sshArgs}=require('./remote');
 class CodexRpc extends EventEmitter{
- constructor({scope,codex='codex',spawn:spawnProcess=spawn,WebSocket:Socket=WebSocket}={}){super();this.scope=scope;this.codex=codex;this.spawn=spawnProcess;this.Socket=Socket;this.pending=new Map();this.nextId=0;}
+ constructor({scope,codex='codex',sshPath='ssh',sshConfigFile='',spawn:spawnProcess=spawn,WebSocket:Socket=WebSocket}={}){super();this.scope=scope;this.codex=codex;this.sshPath=sshPath;this.sshConfigFile=sshConfigFile;this.spawn=spawnProcess;this.Socket=Socket;this.pending=new Map();this.nextId=0;}
  async connect(){if(this.connecting)return this.connecting;this.connecting=this.open().catch(error=>{this.close();throw error;});return this.connecting;}
  async open(){
   const remote=this.scope?.host;const command=[this.codex,'app-server','proxy'];
-  const child=this.spawn(remote?'ssh':command[0],remote?['-T','-o','BatchMode=yes','-o','ConnectTimeout=8','--',remote,'export PATH="$HOME/.local/bin:$PATH"; exec '+command.map(quote).join(' ')]:command.slice(1),{env:userEnvironment(),stdio:['pipe','pipe','pipe']});this.child=child;let stderr='';
+  const child=this.spawn(remote?this.sshPath:command[0],remote?[...sshArgs(this.scope,this.sshConfigFile),'-T','-o','BatchMode=yes','-o','ConnectTimeout=8','--',remote,'export PATH="$HOME/.local/bin:$PATH"; exec '+command.map(quote).join(' ')]:command.slice(1),{env:userEnvironment(),stdio:['pipe','pipe','pipe']});this.child=child;let stderr='';
   child.stderr.setEncoding('utf8');child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});child.stdin.on('error',error=>this.fail(error));child.once('error',error=>this.fail(error));
   const stream=Duplex.from({readable:child.stdout,writable:child.stdin});for(const method of ['setTimeout','setNoDelay','setKeepAlive'])stream[method]=()=>stream;
   const agent=new Agent({keepAlive:false});agent.createConnection=()=>stream;this.agent=agent;

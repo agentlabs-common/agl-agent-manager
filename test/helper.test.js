@@ -54,3 +54,24 @@ test('YOLO restart retains the session ID, waits for shutdown and rejects unsafe
 test('long replies retain every sentence and code text instead of their voice summaries',async()=>{const r=await run('python3',['-c',"import agent,json,tempfile,os\nbody='First sentence. '+('All of these details must remain visible and spoken. '*40)+'Final sentence.'\nwith tempfile.TemporaryDirectory() as root:\n f=os.path.join(root,'log.jsonl');agent.transcript=lambda sid:f\n entries=[{'type':'user','message':{'content':'x'*3000}},{'type':'assistant','message':{'id':'turn','content':[{'type':'text','text':body+'\\n<voice>Short summary.</voice>'}]}}]\n with open(f,'w') as stream:\n  for entry in entries:stream.write(json.dumps(entry)+'\\n')\n result=agent.voices('sid');assert result['items'][0]['text']=='x'*3000\n reply=result['items'][1];assert reply['text']==body and reply['hasVoice'];assert 'Short summary' not in reply['text']\n assert agent.reply_text('Explanation.\\n```python\\nprint(42)\\n```\\nLast sentence.')=='Explanation. print(42) Last sentence.'\nprint('Full reply checks passed')"],{cwd:path.join(__dirname,'..')});assert.match(r.stdout,/checks passed/);});
 
 test('Claude string replies and mixed content do not stall transcript display',async()=>{const r=await run('python3',['-c',"import agent,tempfile,os,json\nwith tempfile.TemporaryDirectory() as root:\n p=os.path.join(root,'session.jsonl');agent.transcript=lambda sid:p\n entries=[{'type':'assistant','message':None},{'type':'assistant','message':{'id':'string-reply','content':'The complete response uses string content.'}},{'type':'assistant','message':{'id':'mixed-reply','content':[None,'ignore',{'type':'text','text':'Valid text remains visible.'}]}}]\n with open(p,'w') as stream:\n  for entry in entries:stream.write(json.dumps(entry)+'\\n')\n items=agent.voices('sid')['items'];assert len(items)==2;assert items[0]['text']=='The complete response uses string content.';assert items[1]['text']=='Valid text remains visible.'\nprint('Transcript shape checks passed')"],{cwd:path.join(__dirname,'..')});assert.match(r.stdout,/checks passed/);});
+
+test('closed Claude history is scoped, resumable, deduplicated and safely deletable',async()=>{const code=String.raw`import agent,json,os,tempfile
+sid='dddddddd-1234-1234-1234-123456789abc';other='eeeeeeee-1234-1234-1234-123456789abc'
+with tempfile.TemporaryDirectory() as home:
+ os.environ['HOME']=home;root=os.path.join(home,'work');os.mkdir(root);folder=os.path.join(home,'.claude','projects',agent.re.sub(r'[^a-zA-Z0-9]','-',root));os.makedirs(folder)
+ file=os.path.join(folder,sid+'.jsonl')
+ def write(path,cwd):
+  with open(path,'w') as stream:
+   stream.write(json.dumps(dict(type='user',cwd=cwd,message=dict(content='Saved task')))+'\n')
+   stream.write(json.dumps({'type':'custom-title','customTitle':'Closed conversation'})+'\n')
+ write(file,root);write(os.path.join(folder,other+'.jsonl'),root+'/nested');calls=[];agent.run=lambda args,cwd=None:calls.append(args) or '[]';agent.metadata=lambda sid:{}
+ rows=agent.listing(root);assert len(rows)==1 and rows[0]['name']=='Closed conversation' and not rows[0]['live']
+ assert agent.prepare(root,sid)['argv']==['claude','--resume',sid]
+ try:agent.delete_session(root,other);raise AssertionError('out of folder deletion allowed')
+ except RuntimeError:pass
+ native=dict(sessionId=sid,id=sid,kind='interactive',state='idle',cwd=root);agent.run=lambda args,cwd=None:json.dumps([native])
+ assert len(agent.listing(root))==1
+ try:agent.delete_session(root,sid);raise AssertionError('running session deleted')
+ except RuntimeError:pass
+ agent.run=lambda args,cwd=None:'[]';agent.delete_session(root,sid);assert not os.path.exists(file);assert os.path.exists(os.path.join(folder,other+'.jsonl'))
+print('Saved history checks passed')`;const r=await run('python3',['-c',code],{cwd:path.join(__dirname,'..')});assert.match(r.stdout,/checks passed/);});
