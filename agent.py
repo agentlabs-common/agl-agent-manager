@@ -129,7 +129,7 @@ def voices(sid,cursor=None):
             summaries.extend(' '.join(value.split()) for value in spoken if value.strip())
             for value in VIEW.findall(text):
                 if value.strip():views.append(dict(ts=ts,text=value.strip(),id=str(turn)+':view:'+str(index)))
-        if bodies:items.append(dict(ts=ts,text=' '.join(bodies),speechText='\n'.join(speech_bodies),turn=turn,source='early',hasVoice=bool(summaries),id=str(turn)+':reply'))
+        if bodies:items.append(dict(ts=ts,text=' '.join(bodies),speechText=' '.join(summaries) if summaries else '\n'.join(speech_bodies),turn=turn,source='early',hasVoice=bool(summaries),id=str(turn)+':reply'))
         elif summaries:items.append(dict(ts=ts,text=' '.join(summaries),turn=turn,source='voice',id=str(turn)+':voice'))
     return dict(session=sid,transcript=file,items=items[-200:],views=views[-30:],reset=reset,cursor=next_cursor)
 

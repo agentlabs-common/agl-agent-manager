@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory() as root:
  with open(file,'w') as stream:
   for entry in entries:stream.write(json.dumps(entry)+'\n')
  a.transcript=lambda sid:file
- data=a.voices(sid);assert data['items'][0]['you'];assert data['items'][1]['text']=='Use the literal tag.';assert data['views'][0]['text']=='Notes'
+ data=a.voices(sid);assert data['items'][0]['you'];assert data['items'][1]['text']=='Use the literal tag.';assert data['items'][1]['speechText']=='Spoken summary';assert data['views'][0]['text']=='Notes'
 print('Native helper checks passed')`;const result=await run('python3',['-c',code],{cwd:path.join(__dirname,'..')});assert.match(result.stdout,/checks passed/);});
 
 test('incremental transcript cursor preserves partial records and exposes reply text before voice tags',async()=>{const code=String.raw`import importlib.util,json,os,tempfile
