@@ -11,13 +11,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.5.1.vsix**.
+2. Select **claude-folder-agents-0.5.2.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **Agent Sessions** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.5.1.vsix --force`
+`code --install-extension claude-folder-agents-0.5.2.vsix --force`
 
 ## Codex sessions
 
@@ -29,7 +29,7 @@ The extension reads Codex daemon history without sending prompts, forking thread
 Completed Codex replies use the same full-message TTS, Indian voice catalog, dictation, and Gemini Live prompt editing as Claude.
 
 Use **+ → Codex**, **Agent Sessions: New Codex Session**, or **New Codex Session (YOLO)** to create a session.
-Existing idle Codex sessions can use **Restart Session in YOLO Mode**. Wait for an active task to finish before switching mode.
+Use **Restart Session in YOLO Mode** to interrupt the selected active turn and resume the same session with YOLO permissions. Ordinary opening attaches to a running session without interrupting it.
 Codex YOLO uses `--dangerously-bypass-approvals-and-sandbox`.
 
 The local or SSH host needs Codex with the shared daemon API (verified with 0.166.0).
@@ -113,13 +113,14 @@ All microphone input uses the conversational **gemini-3.8-live** model. No Deepg
 The default minimum silence window is **3 seconds**. In settings, choose **Pause before sending** to use 3, 5, or a custom 1–10 seconds.
 Gemini can continue waiting if the thought is incomplete. Fillers such as “right” and “or rather” are not submitted on their own.
 After **3 minutes without microphone activity**, Live disconnects automatically. Unfinished dictation is preserved in the composer, and reply readout stays available.
-**Polish spoken prompts** cleans up grammar, punctuation, and false starts while preserving intent, technical terms, paths, and constraints.
+**Remove spoken redundancy** removes only repeated wording and hesitation sounds. It keeps all distinct requirements, self-corrections, numbers, paths, and technical details. Unsafe edits fall back to the complete original dictation. Failed submissions stay visible as a draft.
 Disable it to preserve the original wording. Reconnect after changing Live settings.
 
 Gemini is a prompt editor, not the coding agent. Claude or Codex performs the task.
 Reply readout uses the dedicated Gemini TTS API, preserving the selected Indian or other catalog voice.
 
-**Mute mic** mutes input. **Review before sending** places polished prompts in the composer instead of submitting them.
+All action icons share one bottom toolbar. Pause and Resume share a position. Hover an icon for its label.
+**Mute mic** mutes input. **Review** places spoken prompts in the composer instead of submitting them.
 The microphone pauses during reply playback by default to prevent speaker echo.
 With a headset, **Live Barge In** keeps it active during playback.
 
@@ -165,4 +166,4 @@ Open this directory in VS Code and press **F5**.
 `npm test` checks exact folder scope, Claude icons, terminal reuse, SSH quoting, and voice lifecycle.
 `npm run test:host` loads the extension in an isolated VS Code window (requires Xvfb).
 `npm run package` builds the VSIX.
-There are no runtime npm dependencies.
+The packaged extension includes the ws WebSocket transport dependency.

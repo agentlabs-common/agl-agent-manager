@@ -2,7 +2,7 @@
   "name": "claude-folder-agents",
   "displayName": "Agent Sessions & Voice",
   "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "publisher": "local-tools",
   "license": "MIT",
   "engines": {
@@ -226,7 +226,7 @@
           "type": "boolean",
           "default": true,
           "scope": "application",
-          "description": "Let Gemini Live polish grammar and self-corrections while preserving spoken intent and technical details."
+          "description": "Remove only redundant repetitions and hesitation sounds. Preserve every distinct spoken requirement and fall back to original wording for unsafe edits."
         }
       }
     }
