@@ -11,17 +11,17 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.7.3.vsix**.
+2. Select **claude-folder-agents-0.7.4.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.7.3.vsix --force`
+`code --install-extension claude-folder-agents-0.7.4.vsix --force`
 
 ## Claude workspace trust
 
-Run **AGL Agent Manager: Trust This Workspace for Claude** from the Command Palette or the **…** menu in either agent sidebar. Then retry opening the agent. The action approves the canonical parent workspace, even when invoked from an agent folder. It merges the trust flag into Claude’s configuration on the machine running the agents; SSH workspaces update the remote configuration. Other configuration entries are kept. No agent is started or interrupted.
+Run **AGL Agent Manager: Trust This Workspace for Claude** from the Command Palette or the **…** menu in either agent sidebar. If a launch reports missing trust, select **Trust Workspace and Retry** to approve the parent and continue automatically. The action approves the canonical parent workspace, even when invoked from an agent folder. It merges the trust flag into Claude’s configuration on the machine running the agents; SSH workspaces update the remote configuration. Other configuration entries are kept. No agent is started or interrupted.
 
 Ordinary session subfolders inherit parent trust. Nested Git repositories and some project permissions can still require their own approval. This action does not enable YOLO mode.
 
@@ -63,7 +63,7 @@ For example, VS Code remains open at **workspace-eb**, while Claude agent **eb-d
 
 **Working directory and history are separate.** A new agent starts in the specific session folder. Its conversation history stays in the native agent data directory on the machine running it, rather than being copied into the workspace folder. Existing agents are not moved, stopped, or deleted. The agent list excludes agents outside .sessions, including those started directly in the canonical workspace. Closed histories remain visible while their workspace folder still exists.
 
-Select an agent-folder row to start or resume its agent in the same window. **Reveal Agent Folder** expands the folder in the existing Explorer. Creating or reopening agents never calls Open Folder or opens another VS Code window. Native launchers currently support Claude and Codex.
+Select an agent-folder row to start or resume its agent in the same window. Repeating New Agent with an existing agent type and name opens that folder, including after a failed first launch. Repeated clicks share the same pending launch. **Reveal Agent Folder** expands the folder in the existing Explorer. Creating or reopening agents never calls Open Folder or opens another VS Code window. Native launchers currently support Claude and Codex.
 
 **Remove Agent Folder…** checks all repositories before removing the first worktree. Running agents, dirty/untracked work, symbolic-link escapes, and unexpected files outside the repositories block removal. After confirmation, clean worktrees and ignored build outputs are removed; branches and native conversation history are kept. A later Git failure reports partial removal and preserves the remaining worktrees and metadata. Project skills or notes in the session must be moved or removed before cleanup.
 
