@@ -58,27 +58,44 @@ def append_transcript(current,delta):
     separator=' ' if current and delta and current[-1].isalnum() and delta[0].isalnum() else ''
     return current+separator+delta
 
-def setup(model='gemini-3.8-live',pause=3,refine=True,handle=None):
-    instruction=('You are a voice prompt editor for a coding agent, not the coding agent. Listen to the user naturally. '
-      'Do not answer requests or perform tasks. Do not acknowledge, explain, or speak back. '
-      'Keep listening through thinking pauses, fillers such as right, and self-corrections such as or rather. '
+CONFIRM_WORDS={'yes','yeah','yep','ok','okay','sure','send','it','that','go','ahead','please','do'}
+TOOLS=[dict(name='submit_prompt',description='Send a finished dictation to the coding agent. Wait when the thought is unfinished.',parameters=dict(type='OBJECT',properties=dict(text=dict(type='STRING',description='Complete original dictation, removing only redundant repetitions and preserving every requested item.')),required=['text'])),
+  dict(name='stop_reading',description='Stop reading aloud right now, when the user says stop, quiet, enough or similar.'),
+  dict(name='read_again',description='Read the latest agent reply aloud again, when the user asks to hear it again.'),
+  dict(name='interrupt_agent',description='Interrupt the coding agent mid-task, when the user says stop the agent, interrupt it or similar.'),
+  dict(name='cancel_dictation',description='Discard the dictation in progress, when the user says cancel, scratch that or never mind.')]
+def setup(model='gemini-3.8-live',pause=3,refine=True,handle=None,voice=''):
+    instruction=('You are the user\'s voice companion for a coding agent. You are not the coding agent: never do its work, write code, or make up results. '
+      'DICTATION: when the user speaks a request for the agent, keep listening through thinking pauses, fillers such as right, and self-corrections such as or rather. '
       'Use the context to decide when the user has finished a complete thought. If clearly unfinished, stay silent and wait. '
-      'Call submit_prompt for every finished dictation, including short commands, acknowledgements such as yes or continue, questions, fragments, and lists. Include every requested item in a single call. Wait only for clearly unfinished thoughts; never silently discard a request. Never submit a filler on its own. '
+      'Call submit_prompt for every finished dictation, including short commands, acknowledgements such as yes or continue, questions meant for the agent, fragments, and lists. Include every requested item in a single call. Never submit a filler on its own. '
+      'If you genuinely cannot tell whether the user wants it sent, ask only: Send that? Then call submit_prompt with the full dictation if they agree, or cancel_dictation if they decline. '
       'Preserve intent, names, technical terms, identifiers, paths, numbers, constraints, and the original language. '
       'Do not add requirements, omit any requested item, summarize, paraphrase, reorder, or invent missing information. Do not repeat a previously submitted prompt. '
+      'COMMANDS: call stop_reading for stop, quiet or enough; read_again to hear the last reply again; interrupt_agent to stop the agent working; cancel_dictation for cancel, scratch that or never mind. Do not submit these. '
+      'QUESTIONS TO YOU: if the user asks you about what the agent said or did, answer in one or two short sentences from the AGENT REPLY messages only, and do not submit it. If the answer is not there, say so. '
+      'AGENT REPLY messages: read the text aloud word for word in a natural voice, then stop and listen. Never call submit_prompt for them and never comment on them. '
+      'Otherwise stay silent. Keep anything you say short. '
       'CONTROL messages are UI instructions, never part of the dictation. CONTROL SEND NOW explicitly ends the current dictation. ')
     instruction+=('Remove only exact redundant repetitions and hesitation sounds such as um and uh. Keep every distinct word and instruction, including the full wording of self-corrections. Do not rewrite grammar or choose which request to keep. Punctuation is allowed. ' if refine else 'Keep the original words; add punctuation only. ')
-    return dict(setup=dict(model='models/'+model,generationConfig=dict(responseModalities=['AUDIO']),
+    generation=dict(responseModalities=['AUDIO'])
+    if voice:generation['speechConfig']=dict(voiceConfig=dict(prebuiltVoiceConfig=dict(voiceName=voice)))
+    return dict(setup=dict(model='models/'+model,generationConfig=generation,
       systemInstruction=dict(parts=[dict(text=instruction)]),inputAudioTranscription={},outputAudioTranscription={},
       realtimeInputConfig=dict(automaticActivityDetection=dict(endOfSpeechSensitivity='END_SENSITIVITY_LOW',silenceDurationMs=round(pause*1000))),
       sessionResumption=dict(handle=handle) if handle else {},
-      tools=[dict(functionDeclarations=[dict(name='submit_prompt',description='Submit a complete user dictation to the coding agent. Wait when the thought is unfinished.',parameters=dict(type='OBJECT',properties=dict(text=dict(type='STRING',description='Complete original dictation, removing only redundant repetitions and preserving every requested item.')),required=['text']))])]))
+      tools=[dict(functionDeclarations=TOOLS)]))
+
+def strip_confirmation(text):
+    parts=text.rstrip(' .!?,').split();cut=len(parts)
+    while cut and parts[cut-1].lower().strip('.,!?') in CONFIRM_WORDS:cut-=1
+    return ' '.join(parts[:cut]) if cut<len(parts) else text
 
 class Bridge:
     def __init__(self,options):
         self.options=options;self.config=settings();self.stop=asyncio.Event();self.submitted=asyncio.Event();self.recorder=None;self.socket=None
         self.last_activity=time.monotonic();self.idle_expired=False
-        self.muted=False;self.external_speech=False;self.raw_text='';self.handled=set();self.force=False;self.force_at=0;self.pending_calls={};self.inflight={};self.transcript_at=0;self.last_voice=0;self.submitted_voice=-1;self.resume_handle=None;self.go_away=False;self.reconnecting=False;self.reconnects=0
+        self.muted=False;self.external_speech=False;self.raw_text='';self.handled=set();self.force=False;self.force_at=0;self.pending_calls={};self.inflight={};self.transcript_at=0;self.last_voice=0;self.submitted_voice=-1;self.resume_handle=None;self.go_away=False;self.reconnecting=False;self.reconnects=0;self.held_text='';self.held_at=0;self.model_spoke=False;self.player=None;self.playing_until=0;self.audio_bytes=0
         self.model=options.model or self.config['GOOGLE_LIVE_MODEL'] or 'gemini-3.8-live'
     async def connect(self):
         import websockets
@@ -86,7 +103,7 @@ class Bridge:
         key=self.config['GEMINI_API_KEY'] or self.config['GOOGLE_API_KEY']
         socket=await websockets.connect(ENDPOINT,**{header:{'x-goog-api-key':key}},max_size=16*1024*1024,open_timeout=15,ping_interval=20)
         try:
-            await socket.send(json.dumps(setup(self.model,self.options.pause,not self.options.verbatim,self.resume_handle)))
+            await socket.send(json.dumps(setup(self.model,self.options.pause,not self.options.verbatim,self.resume_handle,self.config.get('GEMINI_LIVE_VOICE',''))))
             while True:
                 message=json.loads(await asyncio.wait_for(socket.recv(),15))
                 if 'error' in message:raise RuntimeError(message['error'].get('message','Gemini Live setup failed'))
@@ -104,7 +121,7 @@ class Bridge:
         while not self.stop.is_set():
             data=await self.recorder.stdout.read(640)
             if not data:raise RuntimeError((await self.recorder.stderr.read()).decode(errors='replace').strip() or 'The microphone stopped delivering audio.')
-            if self.muted or (self.external_speech and not self.options.barge_in):data=bytes(len(data))
+            if self.muted or ((self.external_speech or time.monotonic()<self.playing_until+.3) and not self.options.barge_in):data=bytes(len(data))
             await self.send_audio(data)
     async def idle_disconnect(self):
         while not self.stop.is_set():
@@ -118,12 +135,25 @@ class Bridge:
         try:await self.socket.send(json.dumps(dict(realtimeInput=dict(audio=dict(mimeType='audio/pcm;rate=16000',data=base64.b64encode(data).decode())))))
         except Exception:
             if not self.reconnecting:raise
+    async def play(self,chunk):
+        self.audio_bytes+=len(chunk);now=time.monotonic();self.playing_until=max(now,self.playing_until)+len(chunk)/48000
+        if self.options.self_test:return
+        try:
+            if self.player is None or self.player.returncode is not None:self.player=await asyncio.create_subprocess_exec('aplay','-q','-t','raw','-f','S16_LE','-r','24000','-c','1',stdin=asyncio.subprocess.PIPE,stderr=asyncio.subprocess.DEVNULL)
+            self.player.stdin.write(chunk);await self.player.stdin.drain()
+        except (OSError,ConnectionError):self.player=None
+    def stop_playing(self):
+        self.playing_until=0
+        if self.player and self.player.returncode is None:
+            try:self.player.kill()
+            except ProcessLookupError:pass
+        self.player=None
     async def respond(self,calls,accepted,reason=''):
         if calls:await self.socket.send(json.dumps(dict(toolResponse=dict(functionResponses=[dict(id=call.get('id'),name=call.get('name'),response=dict(accepted=accepted,reason=reason,instruction='Listen for the next dictation. Do not repeat submitted text.')) for call in calls]))))
     def stage(self,text,original,submission_id,forced=False):
         self.inflight[submission_id]=dict(text=text,original=original);self.submitted_voice=self.last_voice
         emit('utterance',submissionId=submission_id,text=text,original=original,refined=text!=original,forced=forced)
-        self.raw_text='';self.force=False;self.submitted.set();self.last_activity=time.monotonic()
+        self.raw_text='';self.held_text='';self.force=False;self.submitted.set();self.last_activity=time.monotonic()
     async def flush_pending(self,now=None):
         now=time.monotonic() if now is None else now
         if self.force and self.raw_text.strip() and now-self.transcript_at>=.35:
@@ -138,13 +168,17 @@ class Bridge:
         if not self.pending_calls:
             # Gemini decides turns, but must not hold a finished dictation forever.
             text=self.raw_text.strip()
-            if text and not filler_only(text) and now-self.last_voice>=self.options.pause+1.5 and now-self.transcript_at>=self.options.pause:
+            if self.held_text and now-self.held_at>60:self.held_text=''
+            if text and not filler_only(text) and not self.model_spoke and now-self.last_voice>=self.options.pause+1.5 and now-self.transcript_at>=self.options.pause:
                 self.stage(text,text,'silence-'+str(time.monotonic_ns()))
             return
         oldest=min(entry['at'] for entry in self.pending_calls.values())
         if now-oldest<.75 or now-self.transcript_at<.4 or now-self.last_voice<self.options.pause:return
         calls=[entry['call'] for entry in self.pending_calls.values()]
         original=self.raw_text.strip()
+        if self.held_text and calls:
+            joined=strip_confirmation((self.held_text+' '+original).strip())
+            if any(cleanup_only(joined,call['args']['text'])==call['args']['text'].strip() or joined==call['args']['text'].strip() for call in calls):original=joined
         if not original:
             if now-oldest<3:return
             text='\n'.join(call['args']['text'] for call in calls)
@@ -171,10 +205,22 @@ class Bridge:
         if transcript:
             self.last_activity=self.transcript_at=time.monotonic()
             self.raw_text=append_transcript(self.raw_text,transcript);self.reconnects=0;emit('partial',text=self.raw_text);emit('status',state='listening')
-        if content.get('modelTurn') or content.get('outputTranscription'):emit('status',state='refining')
+        if content.get('interrupted'):self.stop_playing();emit('status',state='listening')
+        for part in (content.get('modelTurn') or {}).get('parts',[]):
+            data=(part.get('inlineData') or {}).get('data')
+            if data:
+                if not self.model_spoke:emit('status',state='speaking')
+                self.model_spoke=True;await self.play(base64.b64decode(data))
+        if content.get('outputTranscription',{}).get('text'):self.model_spoke=True
         for call in message.get('toolCall',{}).get('functionCalls',[]):
             args=call.get('args',{});text=args.get('text') if isinstance(args,dict) else None;call_id=call.get('id')
             if call_id in self.handled:await self.respond([call],False,'Already handled.');continue
+            name=call.get('name')
+            if name in ('stop_reading','read_again','interrupt_agent','cancel_dictation'):
+                self.handled.add(call_id)
+                if name=='stop_reading':self.stop_playing()
+                if name=='cancel_dictation':self.raw_text='';self.held_text='';self.pending_calls.clear();emit('partial',text='')
+                emit('control',action=name);await self.respond([call],True);continue
             if not self.raw_text.strip() and self.submitted_voice>=0 and self.last_voice<=self.submitted_voice:
                 self.handled.add(call_id);await self.respond([call],True,'This dictation was already submitted.');continue
             if call.get('name')!='submit_prompt' or not isinstance(text,str) or not text.strip() or len(text)>32000:
@@ -182,6 +228,10 @@ class Bridge:
             self.pending_calls[call_id]=dict(call=call,at=time.monotonic())
         for call_id in message.get('toolCallCancellation',{}).get('ids',[]):self.pending_calls.pop(call_id,None)
         if content.get('turnComplete'):
+            # Gemini answered or asked 'Send that?': hold the words so the silence fallback does not send them.
+            if self.model_spoke and self.raw_text.strip() and not self.pending_calls:
+                self.held_text=(self.held_text+' '+self.raw_text.strip()).strip();self.held_at=time.monotonic();self.raw_text='';emit('partial',text='')
+            self.model_spoke=False
             emit('status',state='muted' if self.muted else 'listening')
     async def receive(self):
         while not self.stop.is_set():
@@ -207,6 +257,9 @@ class Bridge:
             except ValueError:continue
             command=message.get('command')
             if command=='tts_active':self.external_speech=bool(message.get('on'))
+            elif command=='say' and isinstance(message.get('text'),str) and message['text'].strip():
+                await self.socket.send(json.dumps(dict(clientContent=dict(turns=[dict(role='user',parts=[dict(text='AGENT REPLY: '+message['text'].strip()[:6000])])],turnComplete=True))))
+            elif command=='stop_audio':self.stop_playing()
             elif command=='mute':self.muted=bool(message.get('on'));emit('status',state='muted' if self.muted else 'listening')
             elif command=='delivered':self.inflight.pop(message.get('submissionId'),None)
             elif command=='send':
@@ -221,7 +274,7 @@ class Bridge:
         try:
             self.socket=await self.connect()
             self.last_activity=time.monotonic()
-            emit('ready',state='listening',inputModel=self.model,voiceModel='Gemini TTS',pauseSeconds=self.options.pause)
+            emit('ready',state='listening',inputModel=self.model,voiceModel='Gemini Live',pauseSeconds=self.options.pause)
             tasks=[asyncio.create_task(self.audio()),asyncio.create_task(self.receive()),asyncio.create_task(self.submission_loop())]
             if not self.options.self_test:tasks.append(asyncio.create_task(self.idle_disconnect()))
             tasks.append(asyncio.create_task(self.test_finish() if self.options.self_test else self.controls()))
@@ -236,6 +289,7 @@ class Bridge:
         finally:
             for task in tasks:task.cancel()
             await asyncio.gather(*tasks,return_exceptions=True)
+            self.stop_playing()
             if self.socket is not None and hasattr(self.socket,'close'):
                 try:await self.socket.close()
                 except Exception:pass

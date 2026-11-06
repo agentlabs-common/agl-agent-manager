@@ -179,8 +179,12 @@ All microphone input uses the conversational **gemini-3.8-live** model. No Deepg
 
 1. Select **Connect Gemini Live** in the bottom controls.
 2. Speak naturally. Gemini keeps context across thinking pauses and self-corrections.
-3. Gemini calls the prompt-submission function when your thought is complete.
+3. Gemini decides when your thought is complete and sends it. If it never does, what it heard is sent after the pause. When unsure, it asks “Send that?”.
 4. Use **Send now** to explicitly end a dictation, or **Disconnect** to stop the microphone.
+5. Gemini reads the agent’s replies aloud in its own voice. Ask it about a reply (“did the tests pass?”) and it answers from the reply without sending anything to the agent.
+6. Say **stop** or **quiet** to stop reading, **read that again**, **stop the agent** to interrupt it, or **cancel** / **scratch that** to drop the current dictation.
+
+Prompts are typed into the agent terminal and Enter is pressed separately, so long dictation is submitted instead of being treated as a paste.
 
 The default minimum silence window is **3 seconds**. In settings, choose **Pause before sending** to use 3, 5, or a custom 1–10 seconds.
 Gemini can continue waiting if the thought is incomplete. Fillers such as “right” and “or rather” are not submitted on their own.
@@ -188,8 +192,9 @@ After **3 minutes without microphone activity**, Live disconnects automatically.
 **Remove spoken redundancy** removes only repeated wording and hesitation sounds. It keeps all distinct requirements, self-corrections, numbers, paths, and technical details. Unsafe edits fall back to the complete original dictation. Failed submissions stay visible as a draft.
 Disable it to preserve the original wording. Reconnect after changing Live settings.
 
-Gemini is a prompt editor, not the coding agent. Claude or Codex performs the task.
-Reply readout uses the dedicated Gemini TTS API, preserving the selected Indian or other catalog voice.
+Gemini is a voice companion, not the coding agent. Claude or Codex performs the task.
+While Live is connected, Gemini Live speaks replies (set `GEMINI_LIVE_VOICE` for a prebuilt Live voice). When it is disconnected, readout uses the dedicated Gemini TTS API with the selected catalog voice.
+Live sessions resume automatically when Gemini rotates the connection. Events, without partial transcripts, are logged to `~/.cache/agl-agent-manager/live.log`.
 
 The connection icon stays green while connected; click it to disconnect. Live transcription appears above the composer on every tab.
 All action icons share one bottom toolbar. Pause and Resume share a position. Hover an icon for its label.
