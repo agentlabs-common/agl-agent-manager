@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
 """Conversational Gemini Live prompt editing for Claude and Codex."""
 import argparse,asyncio,base64,difflib,inspect,json,os,re,shlex,signal,struct,sys,time
-from contextlib import AsyncExitStack
 ENDPOINT='wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent'
 
+LOG=os.environ.get('AGL_LIVE_LOG') or os.path.expanduser('~/.cache/agl-agent-manager/live.log')
+def log(kind,values):
+    if kind=='partial':return
+    try:
+        os.makedirs(os.path.dirname(LOG),exist_ok=True)
+        if os.path.exists(LOG) and os.path.getsize(LOG)>2*1024*1024:os.replace(LOG,LOG+'.1')
+        with open(LOG,'a') as stream:stream.write(json.dumps(dict(at=time.strftime('%Y-%m-%dT%H:%M:%S'),type=kind,**values),ensure_ascii=False)+'\n')
+    except OSError:pass
 def emit(kind,**values):
+    log(kind,values)
     print(json.dumps(dict(type=kind,**values),ensure_ascii=False),flush=True)
 
 def settings():
@@ -50,7 +58,7 @@ def append_transcript(current,delta):
     separator=' ' if current and delta and current[-1].isalnum() and delta[0].isalnum() else ''
     return current+separator+delta
 
-def setup(model='gemini-3.8-live',pause=3,refine=True):
+def setup(model='gemini-3.8-live',pause=3,refine=True,handle=None):
     instruction=('You are a voice prompt editor for a coding agent, not the coding agent. Listen to the user naturally. '
       'Do not answer requests or perform tasks. Do not acknowledge, explain, or speak back. '
       'Keep listening through thinking pauses, fillers such as right, and self-corrections such as or rather. '
@@ -63,24 +71,28 @@ def setup(model='gemini-3.8-live',pause=3,refine=True):
     return dict(setup=dict(model='models/'+model,generationConfig=dict(responseModalities=['AUDIO']),
       systemInstruction=dict(parts=[dict(text=instruction)]),inputAudioTranscription={},outputAudioTranscription={},
       realtimeInputConfig=dict(automaticActivityDetection=dict(endOfSpeechSensitivity='END_SENSITIVITY_LOW',silenceDurationMs=round(pause*1000))),
+      sessionResumption=dict(handle=handle) if handle else {},
       tools=[dict(functionDeclarations=[dict(name='submit_prompt',description='Submit a complete user dictation to the coding agent. Wait when the thought is unfinished.',parameters=dict(type='OBJECT',properties=dict(text=dict(type='STRING',description='Complete original dictation, removing only redundant repetitions and preserving every requested item.')),required=['text']))])]))
 
 class Bridge:
     def __init__(self,options):
         self.options=options;self.config=settings();self.stop=asyncio.Event();self.submitted=asyncio.Event();self.recorder=None;self.socket=None
         self.last_activity=time.monotonic();self.idle_expired=False
-        self.muted=False;self.external_speech=False;self.raw_text='';self.handled=set();self.force=False;self.force_at=0;self.pending_calls={};self.inflight={};self.transcript_at=0;self.last_voice=0;self.submitted_voice=-1
+        self.muted=False;self.external_speech=False;self.raw_text='';self.handled=set();self.force=False;self.force_at=0;self.pending_calls={};self.inflight={};self.transcript_at=0;self.last_voice=0;self.submitted_voice=-1;self.resume_handle=None;self.go_away=False;self.reconnecting=False;self.reconnects=0
         self.model=options.model or self.config['GOOGLE_LIVE_MODEL'] or 'gemini-3.8-live'
-    async def connect(self,stack):
+    async def connect(self):
         import websockets
         header='additional_headers' if 'additional_headers' in inspect.signature(websockets.connect).parameters else 'extra_headers'
         key=self.config['GEMINI_API_KEY'] or self.config['GOOGLE_API_KEY']
-        socket=await stack.enter_async_context(websockets.connect(ENDPOINT,**{header:{'x-goog-api-key':key}},max_size=16*1024*1024,open_timeout=15,ping_interval=20))
-        await socket.send(json.dumps(setup(self.model,self.options.pause,not self.options.verbatim)))
-        while True:
-            message=json.loads(await asyncio.wait_for(socket.recv(),15))
-            if 'error' in message:raise RuntimeError(message['error'].get('message','Gemini Live setup failed'))
-            if 'setupComplete' in message:return socket
+        socket=await websockets.connect(ENDPOINT,**{header:{'x-goog-api-key':key}},max_size=16*1024*1024,open_timeout=15,ping_interval=20)
+        try:
+            await socket.send(json.dumps(setup(self.model,self.options.pause,not self.options.verbatim,self.resume_handle)))
+            while True:
+                message=json.loads(await asyncio.wait_for(socket.recv(),15))
+                if 'error' in message:raise RuntimeError(message['error'].get('message','Gemini Live setup failed'))
+                if 'setupComplete' in message:return socket
+        except BaseException:
+            await socket.close();raise
     async def audio(self):
         if self.options.self_test:
             raw=open(self.options.self_test,'rb').read()
@@ -103,7 +115,9 @@ class Bridge:
     async def send_audio(self,data):
         samples=struct.unpack('<'+'h'*(len(data)//2),data)
         if samples and sum(value*value for value in samples)/len(samples)>500**2:self.last_activity=self.last_voice=time.monotonic()
-        await self.socket.send(json.dumps(dict(realtimeInput=dict(audio=dict(mimeType='audio/pcm;rate=16000',data=base64.b64encode(data).decode())))))
+        try:await self.socket.send(json.dumps(dict(realtimeInput=dict(audio=dict(mimeType='audio/pcm;rate=16000',data=base64.b64encode(data).decode())))))
+        except Exception:
+            if not self.reconnecting:raise
     async def respond(self,calls,accepted,reason=''):
         if calls:await self.socket.send(json.dumps(dict(toolResponse=dict(functionResponses=[dict(id=call.get('id'),name=call.get('name'),response=dict(accepted=accepted,reason=reason,instruction='Listen for the next dictation. Do not repeat submitted text.')) for call in calls]))))
     def stage(self,text,original,submission_id,forced=False):
@@ -121,7 +135,12 @@ class Bridge:
             self.handled.update(call['id'] for call in calls);self.stage(text,original,submission_id,True);await self.respond(calls,True);return
         if self.force and now-self.force_at>5:
             self.force=False;emit('notice',message='No dictation captured yet. Keep speaking or try Send now again.')
-        if not self.pending_calls:return
+        if not self.pending_calls:
+            # Gemini decides turns, but must not hold a finished dictation forever.
+            text=self.raw_text.strip()
+            if text and not filler_only(text) and now-self.last_voice>=self.options.pause+1.5 and now-self.transcript_at>=self.options.pause:
+                self.stage(text,text,'silence-'+str(time.monotonic_ns()))
+            return
         oldest=min(entry['at'] for entry in self.pending_calls.values())
         if now-oldest<.75 or now-self.transcript_at<.4 or now-self.last_voice<self.options.pause:return
         calls=[entry['call'] for entry in self.pending_calls.values()]
@@ -141,12 +160,17 @@ class Bridge:
         while not self.stop.is_set():await asyncio.sleep(.05);await self.flush_pending()
     async def handle(self,message):
         if 'error' in message:raise RuntimeError(message['error'].get('message','Gemini Live failed'))
-        if message.get('voiceActivity',{}).get('type')=='ACTIVITY_START':self.last_voice=self.last_activity=time.monotonic()
+        if message.get('voiceActivity',{}).get('type')=='ACTIVITY_START':
+            self.last_voice=self.last_activity=time.monotonic()
+            if self.external_speech and self.options.barge_in:emit('barge_in')
+        update=message.get('sessionResumptionUpdate')
+        if update and update.get('resumable') and update.get('newHandle'):self.resume_handle=update['newHandle']
+        if 'goAway' in message:self.go_away=True
         content=message.get('serverContent',{})
         transcript=content.get('inputTranscription',{}).get('text','')
         if transcript:
             self.last_activity=self.transcript_at=time.monotonic()
-            self.raw_text=append_transcript(self.raw_text,transcript);emit('partial',text=self.raw_text);emit('status',state='listening')
+            self.raw_text=append_transcript(self.raw_text,transcript);self.reconnects=0;emit('partial',text=self.raw_text);emit('status',state='listening')
         if content.get('modelTurn') or content.get('outputTranscription'):emit('status',state='refining')
         for call in message.get('toolCall',{}).get('functionCalls',[]):
             args=call.get('args',{});text=args.get('text') if isinstance(args,dict) else None;call_id=call.get('id')
@@ -158,11 +182,21 @@ class Bridge:
             self.pending_calls[call_id]=dict(call=call,at=time.monotonic())
         for call_id in message.get('toolCallCancellation',{}).get('ids',[]):self.pending_calls.pop(call_id,None)
         if content.get('turnComplete'):
-            if self.raw_text.strip() and not self.pending_calls and not filler_only(self.raw_text):emit('notice',message='Still holding your dictation. Use Send now if you have finished.')
             emit('status',state='muted' if self.muted else 'listening')
     async def receive(self):
-        async for raw in self.socket:await self.handle(json.loads(raw))
-        if not self.stop.is_set():raise RuntimeError('Gemini Live connection closed. Reconnect to continue.')
+        while not self.stop.is_set():
+            try:
+                async for raw in self.socket:
+                    await self.handle(json.loads(raw))
+                    if self.go_away:break
+            except Exception as error:
+                if self.stop.is_set() or type(error).__name__ not in ('ConnectionClosed','ConnectionClosedError','ConnectionClosedOK'):raise
+            if self.stop.is_set():return
+            if not self.resume_handle or self.reconnects>=3:raise RuntimeError('Gemini Live connection closed. Reconnect to continue.')
+            self.reconnects+=1;self.go_away=False;self.reconnecting=True;old=self.socket;emit('status',state='connecting',reason='Resuming Gemini Live session.')
+            try:self.socket=await self.connect()
+            finally:self.reconnecting=False
+            await old.close();emit('status',state='listening');emit('notice',message='Gemini Live session resumed.')
     async def controls(self):
         reader=asyncio.StreamReader();protocol=asyncio.StreamReaderProtocol(reader)
         await asyncio.get_running_loop().connect_read_pipe(lambda:protocol,sys.stdin)
@@ -185,24 +219,26 @@ class Bridge:
     async def run(self):
         tasks=[]
         try:
-            async with AsyncExitStack() as stack:
-                self.socket=await self.connect(stack)
-                self.last_activity=time.monotonic()
-                emit('ready',state='listening',inputModel=self.model,voiceModel='Gemini TTS',pauseSeconds=self.options.pause)
-                tasks=[asyncio.create_task(self.audio()),asyncio.create_task(self.receive()),asyncio.create_task(self.submission_loop())]
-                if not self.options.self_test:tasks.append(asyncio.create_task(self.idle_disconnect()))
-                tasks.append(asyncio.create_task(self.test_finish() if self.options.self_test else self.controls()))
-                stopper=asyncio.create_task(self.stop.wait());tasks.append(stopper)
-                while True:
-                    done,_=await asyncio.wait(tasks,return_when=asyncio.FIRST_COMPLETED)
-                    for task in done:
-                        if task is stopper:return
-                        error=task.exception()
-                        if error:raise error
-                        tasks.remove(task)
+            self.socket=await self.connect()
+            self.last_activity=time.monotonic()
+            emit('ready',state='listening',inputModel=self.model,voiceModel='Gemini TTS',pauseSeconds=self.options.pause)
+            tasks=[asyncio.create_task(self.audio()),asyncio.create_task(self.receive()),asyncio.create_task(self.submission_loop())]
+            if not self.options.self_test:tasks.append(asyncio.create_task(self.idle_disconnect()))
+            tasks.append(asyncio.create_task(self.test_finish() if self.options.self_test else self.controls()))
+            stopper=asyncio.create_task(self.stop.wait());tasks.append(stopper)
+            while True:
+                done,_=await asyncio.wait(tasks,return_when=asyncio.FIRST_COMPLETED)
+                for task in done:
+                    if task is stopper:return
+                    error=task.exception()
+                    if error:raise error
+                    tasks.remove(task)
         finally:
             for task in tasks:task.cancel()
             await asyncio.gather(*tasks,return_exceptions=True)
+            if self.socket is not None and hasattr(self.socket,'close'):
+                try:await self.socket.close()
+                except Exception:pass
             if self.recorder and self.recorder.returncode is None:
                 self.recorder.terminate()
                 try:await asyncio.wait_for(self.recorder.wait(),2)
