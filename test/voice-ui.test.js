@@ -19,3 +19,10 @@ test('Dictate button stays visible with Live connected and shows the words while
  receive({data:{type:'dictation',state:'listening',text:'hello agent'}});assert.equal(el('dictate').attributes['aria-pressed'],'true');assert.equal(el('live-partial').textContent,'hello agent');assert.match(el('transcription-label').textContent,/DICTATING/);
  receive({data:{type:'live',state:'listening',partial:'',lines:[]}});assert.equal(el('live-partial').textContent,'hello agent','Live updates do not hide the dictation');
  receive({data:{type:'dictation',state:'idle'}});assert.equal(el('dictate').attributes['aria-pressed'],'false');});
+test('Voices shows the voice summary for a reply, with the full reply folded below',()=>{const elements=new Map(),messages=[];let receive;
+ const make=tag=>({tag,children:[],hidden:false,dataset:{},scrollHeight:0,scrollTop:0,addEventListener(type,fn){this[type]=fn;},append(...nodes){this.children.push(...nodes);},replaceChildren(){this.children=[];},querySelector(){return null;},classList:{toggle(){}},setAttribute(name,value){this.attributes??={};this.attributes[name]=value;}});
+ const el=id=>{if(!elements.has(id))elements.set(id,make('div'));return elements.get(id);};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../media/voice.js'),'utf8'),{acquireVsCodeApi:()=>({postMessage:m=>messages.push(m)}),document:{getElementById:el,createElement:make,querySelectorAll:()=>[]},window:{addEventListener:(type,fn)=>{receive=fn;}},Date});
+ receive({data:{type:'voices',items:[{text:'Long reply with tables and paths.',speechText:'Short spoken summary.',hasVoice:true},{text:'Reply without a voice block.',speechText:'Reply without a voice block.',hasVoice:false}],views:[]}});
+ const [withVoice,plain]=el('voices').children;assert.equal(withVoice.children[1].textContent,'Short spoken summary.');assert.equal(withVoice.children[2].tag,'details');assert.equal(withVoice.children[2].children[1].textContent,'Long reply with tables and paths.');
+ assert.equal(plain.children[1].textContent,'Reply without a voice block.');assert.equal(plain.children.length,2);withVoice.children[1].click();assert.equal(messages.at(-1).type,'speak');});

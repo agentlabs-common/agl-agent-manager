@@ -18,9 +18,13 @@ function render(){
   data.items?.forEach((item,index)=>{
     const row=node('article',item.you?'voice-row prompt-row':'voice-row');
     row.append(node('div','row-meta',(item.you?'YOU':item.source==='early'&&!item.hasVoice?(data.agent||'Claude').toUpperCase()+' · EARLY REPLY':(data.agent||'Claude').toUpperCase())+' · '+time(item.ts)));
-    const text=node(item.you?'p':'button',item.you?'prompt-text':'voice-text',item.text);
-    if(!item.you){text.title='Read aloud with Gemini TTS';text.addEventListener('click',()=>send('speak',{index}));}
-    row.append(text);container.append(row);
+    // A reply with a <voice> block shows that summary; the full reply folds away below it.
+    const summary=!item.you&&item.hasVoice&&item.speechText?item.speechText:item.text;
+    const text=node(item.you?'p':'button',item.you?'prompt-text':'voice-text',summary);
+    if(!item.you){text.title='Read aloud';text.addEventListener('click',()=>send('speak',{index}));}
+    row.append(text);
+    if(summary!==item.text){const more=node('details','full-reply');more.append(node('summary','','Full reply'),node('p','prompt-text',item.text));row.append(more);}
+    container.append(row);
   });
   container.scrollTop=container.scrollHeight;
   el('views').replaceChildren();
