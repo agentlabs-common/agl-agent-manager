@@ -4,7 +4,31 @@ set -euo pipefail
 operation=$1; dir=$2; shift 2
 umask 077
 mkdir -p "$dir"
+stop_record() {
+ if [ -f "$dir/record.pid" ]; then kill -INT "$(cat "$dir/record.pid")" 2>/dev/null || true; rm -f "$dir/record.pid"; fi
+ if [ -f "$dir/client.pid" ]; then
+  pid=$(cat "$dir/client.pid")
+  for _ in $(seq 1 60); do kill -0 "$pid" 2>/dev/null || break; sleep .1; done
+  kill "$pid" 2>/dev/null || true; rm -f "$dir/client.pid"
+ fi
+ rm -f "$dir/audio.fifo"
+}
 case "$operation" in
+ record)
+  # Plain speech-to-text with the agentlabs-voice Deepgram streamer, the same one Herdr dictation uses.
+  conf="${CC_TTS_CONF:-$HOME/.claude/hooks/tts.conf}"; [ ! -f "$conf" ] || . "$conf"
+  venv="${CC_TTS_VENV:-$HOME/.venvs/tts}"; stt="$HOME/.claude/hooks/stt-stream.py"
+  [ ! -f "$dir/record.pid" ] || { echo 'Dictation is already recording.' >&2;exit 1; }
+  [ -n "${DEEPGRAM_API_KEY:-}${CC_STT_KEY:-}" ] || { echo 'Configure Deepgram in ~/.claude/hooks/tts.conf before dictating.' >&2;exit 1; }
+  [ -x "$venv/bin/python" ] && [ -f "$stt" ] || { echo 'Install the agentlabs-voice speech tools (~/.claude/hooks/stt-stream.py) first.' >&2;exit 1; }
+  command -v arecord >/dev/null || { echo 'Install arecord to use the microphone.' >&2;exit 1; }
+  export DEEPGRAM_API_KEY CC_STT_KEY CC_STT_LANG CC_STT_ONLINE_MODEL CC_STT_KEYTERM_FILE CC_STT_HOST
+  : > "$dir/live.txt"; : > "$dir/final.txt"; rm -f "$dir/audio.fifo"; mkfifo "$dir/audio.fifo"
+  setsid "$venv/bin/python" "$stt" --live "$dir/live.txt" < "$dir/audio.fifo" > "$dir/final.txt" 2> "$dir/record.err" & echo $! > "$dir/client.pid"
+  setsid arecord -q -f S16_LE -r 16000 -c 1 > "$dir/audio.fifo" 2>> "$dir/record.err" < /dev/null & echo $! > "$dir/record.pid" ;;
+ partial) cat "$dir/live.txt" 2>/dev/null || true ;;
+ finish) stop_record; tr '\n' ' ' < "$dir/final.txt" ;;
+ cancel) stop_record; : > "$dir/live.txt" ;;
  voices)
   python="${CLAUDE_AGENTS_VOICE_PYTHON:-python3}"
   "$python" "$(dirname "$0")/tts.py" --list-voices "$@" ;;

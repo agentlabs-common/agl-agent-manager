@@ -151,7 +151,7 @@ Click a reply in either tab to hear it with the selected Gemini TTS voice.
 Connection status, microphone controls, settings, playback controls, and the composer are grouped at the bottom.
 Action buttons use compact icons. Hover for a tooltip; each button also has an accessible label.
 
-**Dictate** connects Gemini Live in **Review before sending** mode.
+**Dictate** is plain speech-to-text, the same Deepgram streamer as Herdr dictation (`~/.claude/hooks/stt-stream.py`, key in `~/.claude/hooks/tts.conf`). Press it to start; your words appear above the composer. Press it again to send the text to the agent. It works with or without Gemini Live; a connected Live session pauses its microphone while you dictate. For Gemini-edited prompts that wait in the composer, choose **Review** in the Live delivery menu.
 Gemini turns your spoken thought into a lightly polished draft. Edit it and select **Send** when ready.
 In **Auto-send polished prompt** mode, complete spoken prompts go directly to the selected agent terminal.
 Typed prompts are sent as written. **Interrupt** sends Ctrl+C to the terminal.
