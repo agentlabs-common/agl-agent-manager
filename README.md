@@ -4,6 +4,7 @@ A standalone VS Code extension for native Claude Code and Codex sessions.
 It lists Claude and Codex agents only inside the current workspace’s .sessions folders, including their repository worktrees.
 Agents started directly in the canonical workspace or elsewhere are excluded.
 Claude sessions use an orange icon. Codex sessions use a green terminal icon.
+A dot (●) marks a session that needs you: a permission prompt or an agent waiting for your answer (warning colour), or a reply you have not looked at yet (blue). The count appears on the view. Opening the session clears its unread dot.
 
 ## Install
 
