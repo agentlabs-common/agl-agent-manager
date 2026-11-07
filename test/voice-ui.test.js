@@ -26,3 +26,8 @@ test('Voices shows the voice summary for a reply, with the full reply folded bel
  receive({data:{type:'voices',items:[{text:'Long reply with tables and paths.',speechText:'Short spoken summary.',hasVoice:true},{text:'Reply without a voice block.',speechText:'Reply without a voice block.',hasVoice:false}],views:[]}});
  const [withVoice,plain]=el('voices').children;assert.equal(withVoice.children[1].textContent,'Short spoken summary.');assert.equal(withVoice.children[2].tag,'details');assert.equal(withVoice.children[2].children[1].textContent,'Long reply with tables and paths.');
  assert.equal(plain.children[1].textContent,'Reply without a voice block.');assert.equal(plain.children.length,2);withVoice.children[1].click();assert.equal(messages.at(-1).type,'speak');});
+test('Notes render Markdown sent as HTML by the extension',()=>{const elements=new Map();let receive;
+ const make=tag=>({tag,children:[],hidden:false,dataset:{},addEventListener(){},append(...nodes){this.children.push(...nodes);},replaceChildren(){this.children=[];},querySelector(){return null;},classList:{toggle(){}},setAttribute(){}});
+ const el=id=>{if(!elements.has(id))elements.set(id,make('div'));return elements.get(id);};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../media/voice.js'),'utf8'),{acquireVsCodeApi:()=>({postMessage(){}}),document:{getElementById:el,createElement:make,querySelectorAll:()=>[]},window:{addEventListener:(type,fn)=>{receive=fn;}},Date});
+ receive({data:{type:'voices',items:[],views:[{text:'## Hi',html:'<h2>Hi</h2>'}]}});const body=el('views').children[0].children[1];assert.equal(body.innerHTML,'<h2>Hi</h2>');});
