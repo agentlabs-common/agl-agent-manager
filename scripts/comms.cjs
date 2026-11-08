@@ -27,10 +27,16 @@ function withLock(dir, fn) {
 }
 function fingerprint(text) { return crypto.createHash('sha256').update(text).digest('hex'); }
 function load(dir) { try { return JSON.parse(fs.readFileSync(path.join(dir, 'contacts.json'), 'utf8')); } catch (e) { if (e.code === 'ENOENT') return { pairs: {} }; throw e; } }
-function save(dir, data) { const file = path.join(dir, 'contacts.json'); const text = JSON.stringify(data, null, 2) + '\n'; fs.writeFileSync(file + '.tmp', text); fs.renameSync(file + '.tmp', file); return text; }
+// The list is a plain file, so a fingerprint catches edits made outside the portal and its tool. Once seen, a change stays
+// flagged, and sending stops, until the user clears it. It catches casual edits; it is not a lock against a determined agent.
+const sumFile = (dir) => path.join(dir, 'contacts.sum'); const markFile = (dir) => path.join(dir, 'contacts.changed');
+function mismatch(dir) { let text, sum; try { text = fs.readFileSync(path.join(dir, 'contacts.json'), 'utf8'); } catch { return false; } try { sum = fs.readFileSync(sumFile(dir), 'utf8').trim(); } catch { return true; } return fingerprint(text) !== sum; }
+function tampered(dir) { return fs.existsSync(markFile(dir)) || mismatch(dir); }
+function clearTampered(dir) { return withLock(dir, () => { let text = ''; try { text = fs.readFileSync(path.join(dir, 'contacts.json'), 'utf8'); } catch {} fs.writeFileSync(sumFile(dir), fingerprint(text)); fs.rmSync(markFile(dir), { force: true }); }); }
+function save(dir, data) { if (mismatch(dir)) fs.writeFileSync(markFile(dir), new Date().toISOString()); const file = path.join(dir, 'contacts.json'); const text = JSON.stringify(data, null, 2) + '\n'; fs.writeFileSync(file + '.tmp', text); fs.renameSync(file + '.tmp', file); fs.writeFileSync(sumFile(dir), fingerprint(text)); return text; }
 
 function contactsOf(dir, me) { return Object.entries(load(dir).pairs).filter(([k]) => k.split('|').includes(me)).map(([k, v]) => ({ with: k.split('|').find((x) => x !== me) || me, ...v })).sort((a, b) => a.with.localeCompare(b.with)); }
-function isAllowed(dir, a, b) { return a === b || load(dir).pairs[pairKey(a, b)]?.status === 'allowed'; }
+function isAllowed(dir, a, b) { return a === b || (!tampered(dir) && load(dir).pairs[pairKey(a, b)]?.status === 'allowed'); }
 
 // An agent asks to talk to someone new. It cannot change a decision the user has made.
 function request(dir, from, to, reason, now = new Date()) {
@@ -51,6 +57,7 @@ function send(dir, from, to, text, now = new Date()) {
   checkId(from); checkId(to); text = String(text || '').trim();
   if (!text) throw new Error('Write a message first.'); if (text.length > 8000) throw new Error('Keep a message under 8,000 characters.');
   if (from === to) throw new Error('That is you.');
+  if (tampered(dir)) throw new Error('The contact list was changed outside the portal. The user must check it before anyone can send.');
   const pair = load(dir).pairs[pairKey(from, to)];
   if (pair?.status !== 'allowed') throw new Error(!pair ? `No permission to talk to ${to}. Ask first: agl-talk request ${to} "why".` : pair.status === 'requested' ? `Your contact request for ${to} is waiting for the user.` : `The user has ${pair.status === 'denied' ? 'denied' : 'withdrawn'} permission to talk to ${to}.`);
   const message = { id: crypto.randomBytes(6).toString('hex'), from, to, text, at: now.toISOString() };
@@ -72,4 +79,4 @@ function markRead(dir, me, messages) { const marks = readMarks(dir, me); for (co
 function heartbeat(dir, me) { const d = path.join(dir, 'listening'); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, fileSafe(me)), new Date().toISOString()); }
 function listeningAt(dir, me) { try { return fs.statSync(path.join(dir, 'listening', fileSafe(me))).mtimeMs; } catch { return 0; } }
 
-module.exports = { defaultDir, pairKey, contactsOf, isAllowed, request, decide, send, readThread, threadsOf, unread, markRead, heartbeat, listeningAt, load, fingerprint };
+module.exports = { tampered, clearTampered, defaultDir, pairKey, contactsOf, isAllowed, request, decide, send, readThread, threadsOf, unread, markRead, heartbeat, listeningAt, load, fingerprint };

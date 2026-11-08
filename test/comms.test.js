@@ -74,11 +74,14 @@ test('the waker wakes a stopped agent with unread messages, and never one on hol
     comms.request(store, LEAD, DEV, 'seat'); comms.decide(store, LEAD, DEV, 'allowed'); comms.send(store, LEAD, DEV, 'Please run the gate');
     assert.deepEqual(await waker.tick({ sessions, dir: store, running: async () => [path.join(root, 'repo')], start }), [], 'still running: no duplicate');
     fs.writeFileSync(path.join(root, '.agl', '.hold'), 'x'); assert.deepEqual(await waker.tick({ sessions, dir: store, running: stopped, start }), [], 'on hold'); fs.rmSync(path.join(root, '.agl', '.hold'));
-    const [w] = await waker.tick({ sessions, dir: store, running: stopped, start }); assert.equal(w.id, DEV); assert.equal(started.length, 1); assert.equal(started[0].sessionId, 'sid-1'); assert.match(started[0].prompt, /from claude\/hrms-lead/);
+    const home = path.join(dir, 'home');
+    const [w] = await waker.tick({ sessions, dir: store, running: stopped, start, home }); assert.equal(w.id, DEV); assert.equal(started.length, 1); assert.equal(started[0].sessionId, 'sid-1'); assert.match(started[0].prompt, /from claude\/hrms-lead/);
     assert.deepEqual(await waker.tick({ sessions, dir: store, running: stopped, start }), [], 'cooldown'); assert.equal(waker.wakes(store, DEV).length, 1, 'each wake is logged');
     const later = Date.now() + waker.COOLDOWN_MS + 1000; comms.decide(store, LEAD, DEV, 'withdrawn'); assert.deepEqual(await waker.tick({ sessions, dir: store, running: stopped, start, now: later }), [], 'withdrawn contact cannot wake');
     const jobs = path.join(dir, 'home', '.claude', 'jobs', 'j1'); fs.mkdirSync(jobs, { recursive: true }); fs.writeFileSync(path.join(jobs, 'state.json'), JSON.stringify({ linkScanPath: '/x/sid-1.jsonl', respawnFlags: ['--name', 'a', '--dangerously-skip-permissions'] }));
     assert.deepEqual(waker.permissionFlags('sid-1', path.join(dir, 'home')), ['--dangerously-skip-permissions'], 'keeps its own mode');
+    const job2 = path.join(dir, 'home', '.claude', 'jobs', 'j2'); fs.mkdirSync(job2, { recursive: true }); fs.writeFileSync(path.join(job2, 'state.json'), JSON.stringify({ linkScanPath: path.join('/p', root.replace(/[^A-Za-z0-9-]/g, '-'), 'earlier.jsonl'), respawnFlags: ['--permission-mode', 'acceptEdits'] }));
+    assert.deepEqual(waker.permissionFlags('new-fork', path.join(dir, 'home'), root), ['--permission-mode', 'acceptEdits'], 'a new fork keeps the folder\'s mode'); assert.deepEqual(waker.permissionFlags('new-fork', path.join(dir, 'home')), []);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); } })();
 });
 
@@ -110,3 +113,32 @@ test('the hook lists unread messages at the next prompt', async () => {
     assert.match(check(root, home), /AGL: 1 new message from claude\/hrms-lead\. Read with: node .*agl-talk\.cjs inbox --read/);
   } finally { fs.rmSync(home, { recursive: true, force: true }); }
 });
+
+test('waker: finished sessions count as stopped, a resume continues the newest conversation, failures back off', async () => {
+  const waker = require('../scripts/waker.cjs'); const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-wake2-'));
+  try {
+    assert.equal(waker.isRunningEntry({ kind: 'background', state: 'done', status: 'idle' }), false, 'finished background session');
+    for (const a of [{ kind: 'interactive', status: 'idle' }, { kind: 'background', state: 'blocked', status: 'idle' }, { kind: 'background', state: 'working', status: 'busy' }, { kind: 'background', state: 'done', status: 'busy' }]) assert.equal(waker.isRunningEntry(a), true, JSON.stringify(a));
+    const root = path.join(dir, 'ws', '.sessions', 'hrms-dev'); fs.mkdirSync(path.join(root, '.agl'), { recursive: true }); fs.writeFileSync(path.join(root, '.agl-session.json'), JSON.stringify({ agent: 'claude', name: 'hrms-dev', conversations: [{ provider: 'claude', sessionId: 'original' }] }));
+    const home = path.join(dir, 'home'); const projects = path.join(home, '.claude', 'projects', root.replace(/[^A-Za-z0-9-]/g, '-')); fs.mkdirSync(projects, { recursive: true });
+    assert.equal(waker.latestSessionId(root, home), 'original', 'no transcript yet: the recorded id');
+    fs.writeFileSync(path.join(projects, 'old.jsonl'), ''); const past = (Date.now() - 60000) / 1000; fs.utimesSync(path.join(projects, 'old.jsonl'), past, past); fs.writeFileSync(path.join(projects, 'fork-2.jsonl'), '');
+    assert.equal(waker.latestSessionId(root, home), 'fork-2', 'the newest conversation');
+    const store = path.join(dir, 'store'); comms.request(store, LEAD, DEV, 'seat'); comms.decide(store, LEAD, DEV, 'allowed'); comms.send(store, LEAD, DEV, 'one', new Date('2026-11-08T10:00:00Z'));
+    const sessions = [{ agent: 'claude', folder: 'hrms-dev', name: 'hrms-dev', sessionRoot: root }]; const running = async () => []; let t = Date.parse('2026-11-08T11:00:00Z'); const calls = []; const fail = async (x) => { calls.push(x.sessionId); return { ok: false, error: 'Workspace not trusted' }; };
+    const run = () => waker.tick({ sessions, dir: store, running, start: fail, now: t, home });
+    assert.equal((await run())[0].ok, false, 'logged as a failure'); assert.equal(waker.wakes(store, DEV)[0].error, 'Workspace not trusted'); assert.equal(calls[0], 'fork-2');
+    t += waker.COOLDOWN_MS + 1000; assert.deepEqual(await run(), [], 'backs off: longer than the cooldown after a failure');
+    t += waker.COOLDOWN_MS * 2; assert.equal((await run()).length, 1); t += waker.COOLDOWN_MS * 4 + 1000; assert.equal((await run()).length, 1); assert.equal(calls.length, 3);
+    t += waker.COOLDOWN_MS * 100; assert.deepEqual(await run(), [], 'stops after three failures');
+    comms.send(store, LEAD, DEV, 'two', new Date(t + 1000)); t += 2000; assert.equal((await run()).length, 1, 'a newer message tries again');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('a contact list changed outside the portal stops messages until the user clears it', () => tmp((dir) => {
+  comms.request(dir, DEV, LEAD, 'my lead'); comms.decide(dir, DEV, LEAD, 'allowed'); assert.equal(comms.tampered(dir), false); comms.send(dir, DEV, LEAD, 'hi');
+  const file = path.join(dir, 'contacts.json'); const d = JSON.parse(fs.readFileSync(file, 'utf8')); d.pairs[comms.pairKey(DEV, OTHER)] = { status: 'allowed' }; fs.writeFileSync(file, JSON.stringify(d));
+  assert.equal(comms.tampered(dir), true); assert.throws(() => comms.send(dir, DEV, OTHER, 'hi'), /changed outside the portal/); assert.equal(comms.isAllowed(dir, DEV, LEAD), false);
+  comms.request(dir, 'claude/a', 'claude/b', 'x'); assert.equal(comms.tampered(dir), true, 'a later save does not hide the change');
+  comms.clearTampered(dir); assert.equal(comms.tampered(dir), false); assert.equal(comms.send(dir, DEV, LEAD, 'ok').text, 'ok');
+}));
