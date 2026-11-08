@@ -6,3 +6,4 @@ preview*.png
 preview.html
 .env
 .env.*
+openui/node_modules/
