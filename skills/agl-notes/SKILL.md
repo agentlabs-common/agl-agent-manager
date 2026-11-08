@@ -173,6 +173,7 @@ next to the real work.
 Everything you run on this machine has one canonical name, ending in `.localhost` (it needs no setup):
 
 - Team: `desk.localhost`. Agent: `dev-1.desk.localhost` (your session name without the team prefix; a lead is `lead.desk.localhost`). App: `auth.dev-1.desk.localhost`.
+- The bare team name opens the lead's copy, the team's reference (`desk.localhost` is `lead.desk.localhost`). Each other agent keeps its own copy under its own name.
 - App names: `ui`, `console`, `auth`, `edge`, `core`, `api`, `db`, `s3`. Bare `dev-1.desk.localhost` is your main UI.
 - **Ports:** machine-keeper gives each team one block; your lead gives you 100 ports from it. Fixed slots in your range: ui x00, console x01, auth x10, edge x11, core x20, api x21, db x30, s3 x31, x40 and up yours. Bind to 127.0.0.1 only. Ask your lead for a range; don't pick one.
 - **Label every container** with its name: `agl.host: auth.dev-1.desk.localhost`, beside `agl.session`. The portal shows it and the keeper reads it, so a port change needs no report.
