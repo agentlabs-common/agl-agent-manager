@@ -18,7 +18,7 @@ function createPortal({listSessions,host='127.0.0.1'}){
   return page('Sessions',body,nonce,'setTimeout(()=>location.reload(),15000)');}
  async function session(nonce,agent,folder,current,error){const s=await find(agent,folder);const n=await notes.readNotes(s.sessionRoot);if(current!=='STATUS'&&current!=='FACTS'&&!n.pages.some(p=>p.slug===current))current='STATUS';
   const tabs=[['STATUS','Status'],['FACTS','Facts'],...n.pages.map(p=>[p.slug,p.title])];
-  const html=n.pages.find(p=>p.slug===current&&p.format==='html');
+  const html=current==='STATUS'&&n.statusFormat==='html'?{title:'Status'}:n.pages.find(p=>p.slug===current&&p.format==='html');
   const text=html?undefined:current==='STATUS'?n.status:await notes.readPage(s.sessionRoot,current);
   // Drop page header lines (shown elsewhere) and point note links (pages/x.md, FACTS.md) at this page's tabs.
   const shown=current==='STATUS'||current==='FACTS'?text:text?.replace(/^((?:.*\r?\n){0,6})/,head=>head.replace(/^(summary|updated):.*\r?\n?/gm,''));

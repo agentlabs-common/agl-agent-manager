@@ -38,3 +38,19 @@ test('agent HTML pages are indexed, served sandboxed with the kit, and can only 
   }finally{await portal.close();}
  }finally{await fs.rm(base,{recursive:true,force:true});}
 });
+
+test('STATUS.html replaces STATUS.md: its index card feeds the list and it is served sandboxed',async()=>{
+ const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-status-')));
+ try{
+  const root=path.join(base,'s');await fs.mkdir(path.join(root,'.agl'),{recursive:true});
+  await fs.writeFile(path.join(root,'.agl','STATUS.md'),'---\nstate: idle\nheadline: old\n---\n');
+  await fs.writeFile(path.join(root,'.agl','STATUS.html'),'<html><head><title>Status</title><meta name="agl:state" content="working"><meta name="agl:headline" content="Agent portal: status page in HTML"><meta name="agl:updated" content="2026-11-08 12:20"></head><body>hi</body></html>');
+  const n=await notes.readNotes(root);assert.equal(n.state,'working');assert.equal(n.headline,'Agent portal: status page in HTML');assert.equal(n.statusFormat,'html');assert.equal(n.status,undefined);
+  const portal=createPortal({listSessions:async()=>[{agent:'claude',folder:'s',name:'s',sessionRoot:root}]});
+  try{
+   assert.match(await (await fetch(await portal.url())).text(),/Agent portal: status page in HTML/);
+   const view=await (await fetch(await portal.url('s','claude','s'))).text();assert.match(view,/sandbox="allow-scripts" [^>]*src="[^"]*\/h\/claude\/s\/STATUS"/);
+   const served=await fetch(await portal.url('h','claude','s','STATUS'));assert.match(served.headers.get('content-security-policy'),/sandbox allow-scripts/);assert.match(await served.text(),/window\.AGL/);
+  }finally{await portal.close();}
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});
