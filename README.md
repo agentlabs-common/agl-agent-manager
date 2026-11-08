@@ -12,13 +12,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.7.18.vsix**.
+2. Select **claude-folder-agents-0.8.0.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.7.18.vsix --force`
+`code --install-extension claude-folder-agents-0.8.0.vsix --force`
 
 ## Claude workspace trust
 
@@ -89,15 +89,19 @@ The **Skills** tab in a Claude session’s Voice pane lists the skills that agen
 
 Source discovery follows [Codex skills](https://developers.openai.com/codex/skills) and [Claude skills](https://code.claude.com/docs/en/skills). Session instructions follow [Codex AGENTS.md](https://developers.openai.com/codex/guides/agents-md) and [Claude memory](https://code.claude.com/docs/en/memory).
 
-## Status page and session notes
+## Agent portal (status pages)
 
-Each session keeps notes in `.agl/`: `STATUS.md` (a short snapshot with a state and a headline), `FACTS.md` (dated, durable facts) and optional `pages/*.md`. The bundled **agl-notes** skill teaches agents the format; the extension installs it into `~/.claude/skills` and `~/.agents/skills` on start and never replaces a skill of the same name that it did not install. New sessions’ `AGENTS.md` points to it.
+Each session keeps its pages in `.agl/`: `STATUS.openui` (its status page), `FACTS.md`, `pages/*` (proposals, designs, guides, its Responsibility page) and `reviews.json` (your answers). Pages are written in [OpenUI Lang](https://github.com/thesysdev/openui) and drawn by the portal's own components; HTML and Markdown pages still work. The bundled **agl-notes** skill teaches agents the format and the status rules.
 
-- **Open Status Page** (pulse icon in **AGL Agent Manager** or **AGL Agent Folders**) opens a local page in your browser. It listens on 127.0.0.1 only, and every URL carries a random token. The home page lists every session in the workspace, needs-you first, with stale and open-review flags.
-- Each session page shows Status, Facts and its pages. **Save comment**, **Yes** and **No** only record a review in `.agl/reviews.json`; nothing is sent to the agent. Tell the agent when you have reviewed; it answers each review, and you select **Confirm reviewed** to close it.
-- The **Status** tab in the Voice pane shows the same status and facts for that agent.
+- **Open Status Page** (pulse icon) opens the agent portal in your browser, on 127.0.0.1 only, with a random token in every URL. The home page lists every session in the workspace, needs-you first, with stale, review and **needs migration** marks.
+- Each session page has a sidebar: Status, Responsibility, Questions and Facts, then one foldable entry per work item with its pages, and an Archive for finished work.
+- **Answering:** a question's buttons only ask. The portal shows its own box with the exact text, and only your click records it in `.agl/reviews.json`. Answered questions are marked at once; agents that wait in the background pick the answer up straight away.
+- **Listen** reads a question aloud, generated live with Gemini (`tts.py`); **Stop audio** beside it, or in the top bar, stops any speech, including the voice hooks' queue (`~/.claude/hooks/hush.sh` when present). Answering also stops it.
+- Agent pages run sealed off in a sandbox: they can use JavaScript, but have no network, no forms and cannot approve anything themselves.
 
-Local workspaces only for now; SSH sessions are not shown. Notes in `.agl/` block **Remove Agent Folder…** until you move or delete them.
+**Delivery on every update.** On start (so after every update) the extension installs its skills as whole folders stamped with its version into `~/.claude/skills` and `~/.agents/skills` (never replacing a skill it did not install), copies the agent tools to `~/.config/agentlabs/agl/`, writes `~/.config/agentlabs/agl/agent-portal.json` (version, portal address, formats, migrations), and adds one `UserPromptSubmit` hook to `~/.claude/settings.json` (a backup is kept as `settings.json.agl-backup`). The hook tells an agent at its next prompt when its skill is newer than the one it last acknowledged, and lists the files to migrate with `agl-migrate.cjs`.
+
+The **Status** tab in the Voice pane shows the same status for that agent. Local workspaces only for now; SSH sessions are not shown. Notes in `.agl/` block **Remove Agent Folder…** until you move or delete them.
 
 ## Closed and hidden sessions
 

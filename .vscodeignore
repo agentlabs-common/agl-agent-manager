@@ -6,3 +6,8 @@ preview.html
 .gitignore
 scripts/**
 __pycache__/**
+!scripts/agl-migrate.cjs
+!scripts/agl-skill-check.cjs
+openui/node_modules/**
+openui/src/**
+openui/package*.json

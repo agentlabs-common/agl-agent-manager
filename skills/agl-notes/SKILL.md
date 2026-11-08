@@ -150,6 +150,25 @@ wins; keep the two from disagreeing, or delete the old one.
 Do not re-read `.agl/` every turn. Read only the file you are about to change. Keep notes work small
 next to the real work.
 
+## Upgrades and migration
+
+- This skill's version is on its marker line (`Installed by AGL Agent Manager 0.8.0`). The plugin reinstalls it on
+  every update and writes `~/.config/agentlabs/agl/agent-portal.json`: the portal version, its address, the
+  formats it shows, and what each release asks you to change.
+- When the installed skill is newer than the version in your `.agl/.skill-version`, a hook adds a note to your next
+  prompt listing your files to migrate. Re-read this skill, then for each listed file run
+  `node ~/.config/agentlabs/agl/agl-migrate.cjs <file> --write`, check the result (a migrated status page has one
+  "Current work" item and a needs-you note to rewrite as Questions), remove the old file, and write the installed
+  version to `.agl/.skill-version`.
+- The portal keeps showing older formats, so nothing breaks before you migrate.
+
+## Custom pages
+
+When the components can't show what you need, any page, the status page included, may be your own HTML with
+JavaScript, or an OpenUI page with your own block. It still runs sealed off (no network, no outside scripts, no
+approving by itself) and keeps its index card and the status rules. Add `<meta name="agl:custom" content="why">` (or
+a `Callout("idle", "Custom: why")`), so the reason reaches the next plugin version. Migration leaves custom pages alone.
+
 ## Hearing answers
 
 Whenever your status page asks the user something, start a background wait that ends when an answer arrives,

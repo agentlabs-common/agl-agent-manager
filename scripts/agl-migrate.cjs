@@ -1,5 +1,5 @@
 // Turn an agent's Markdown page into an OpenUI page for the agent portal.
-// Usage: node scripts/agl-migrate.cjs <page.md> [--write]
+// Usage: node scripts/agl-migrate.cjs <page.md | STATUS.md> [--write]
 //   Prints the OpenUI program; with --write, writes <page>.openui beside it and leaves the .md for the agent to
 //   check and remove. Handles: # title / summary: / updated: / work: header, ## and ### headings, paragraphs,
 //   - and 1. lists, | tables |, ``` code ```, > quotes, and inline <svg> diagrams.
@@ -48,11 +48,33 @@ function migrate(text, slug = 'page') {
   return [`root = Page(${q(head.title)}, ${q(head.summary)}, ${q(kind)}, ${q(head.work)}, ${q(head.updated)}, [${root.join(', ')}])`, ...out].join('\n') + '\n';
 }
 
+// STATUS.md (front matter + sections) to STATUS.openui. Needs-you text becomes a callout for the agent to rewrite as
+// Questions; Now, Progress and Done recently become one work item; the agent then splits it by real work items.
+const STATES = ['needs-you', 'blocked', 'working', 'done', 'idle'];
+function migrateStatus(text, now = new Date()) {
+  const t = String(text).replace(/\r\n?/g, '\n'); const fm = t.match(/^---\n([\s\S]*?)\n---\n?/); const f = {};
+  for (const l of (fm ? fm[1] : '').split('\n')) { const m = l.match(/^(\w+):\s*(.*)$/); if (m) f[m[1]] = m[2].trim(); }
+  const body = fm ? t.slice(fm[0].length) : t; const sec = {}; let cur = null;
+  for (const l of body.split('\n')) { const m = l.match(/^## (.+?)(?:\s*\(.*\))?\s*$/); if (m) { cur = m[1].trim().toLowerCase(); sec[cur] = []; } else if (cur) sec[cur].push(l); }
+  const lines = (k) => (sec[k] || []).join('\n').trim();
+  const items = (k) => (sec[k] || []).filter((l) => /^\s*([-*]|\d+\.)\s+/.test(l)).map((l) => l.replace(/^\s*([-*]|\d+\.)\s+/, '').trim());
+  const state = STATES.includes(f.state) ? f.state : 'idle';
+  const pad = (n) => String(n).padStart(2, '0'); const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const out = []; const needs = [];
+  if (lines('needs you')) { out.push(`n1 = Callout("needs-you", ${q(lines('needs you') + '\n\nMigrated from STATUS.md: rewrite each item as a Question with options, a pick and what happens if nobody answers.')})`); needs.push('n1'); }
+  const ms = items('progress').map((x, i) => { const done = /^\[x\]|\(done\)|— done|: done/i.test(x); const label = x.replace(/^\[[ x]\]\s*/i, '').replace(/\s*\(done[^)]*\)\s*$/i, ''); out.push(`m${i + 1} = Milestone(${q(label)}, ${q(done ? 'done' : 'todo')})`); return 'm' + (i + 1); });
+  const ds = items('done recently').map((x, i) => { const ev = (x.match(/\(evidence:\s*([^)]*)\)/) || [])[1] || ''; out.push(`d${i + 1} = Delivery("", ${q(x.replace(/\s*\(evidence:[^)]*\)/, ''))}, ${q(ev || 'see the old status page')})`); return 'd' + (i + 1); });
+  const goal = lines('now') || f.headline || '';
+  out.unshift(`w1 = WorkItem("Current work", ${q(state === 'needs-you' ? 'working' : state)}, ${q(goal.replace(/\n+/g, ' '))}, [${ms.join(', ')}], [${ds.join(', ')}], "Split this into one work item per piece of work you were given.")`);
+  const blocked = lines('blocked'); if (blocked) out.push(`k1 = Callout("blocked", ${q(blocked)})`);
+  return [`root = Status(${q(state)}, ${q(f.headline || '')}, ${q(f.updated || stamp)}, [${needs.join(', ')}], [w1], [], [])`, ...out].join('\n') + '\n';
+}
+
 if (require.main === module) {
   const [file, flag] = process.argv.slice(2);
   if (!file || !file.endsWith('.md')) { console.error('Usage: node scripts/agl-migrate.cjs <page.md> [--write]'); process.exit(2); }
-  const program = migrate(fs.readFileSync(file, 'utf8'), path.basename(file, '.md'));
+  const program = path.basename(file) === 'STATUS.md' ? migrateStatus(fs.readFileSync(file, 'utf8')) : migrate(fs.readFileSync(file, 'utf8'), path.basename(file, '.md'));
   if (flag === '--write') { const dest = file.replace(/\.md$/, '.openui'); fs.writeFileSync(dest + '.tmp', program); fs.renameSync(dest + '.tmp', dest); console.log('Wrote ' + dest); }
   else process.stdout.write(program);
 }
-module.exports = { migrate };
+module.exports = { migrate, migrateStatus };
