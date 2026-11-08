@@ -12,7 +12,10 @@ function check(cwd, home = os.homedir()) {
   let info; try { info = JSON.parse(read(path.join(home, '.config', 'agentlabs', 'agl', 'agent-portal.json')) || ''); } catch { return ''; }
   const installed = info.skills && info.skills['agl-notes']; if (!installed) return '';
   const acknowledged = (read(path.join(root, '.agl', '.skill-version')) || '').trim();
-  if (!newer(installed, acknowledged)) return '';
+  // The status keeper's checks ride along: each agent hears its own page problems at its next prompt.
+  let keeper = []; try { keeper = require(path.join(__dirname, 'keeper.cjs')).check(root).filter((c) => c.code !== 'old-format'); } catch {}
+  const kept = keeper.length ? ['AGL status keeper, your pages:', ...keeper.map((c) => '- ' + c.text)].join('\n') : '';
+  if (!newer(installed, acknowledged)) return kept;
   const agl = path.join(root, '.agl'); const todo = [];
   if (read(path.join(agl, 'STATUS.md')) !== undefined && read(path.join(agl, 'STATUS.openui')) === undefined && read(path.join(agl, 'STATUS.html')) === undefined) todo.push('.agl/STATUS.md');
   for (const f of (() => { try { return fs.readdirSync(path.join(agl, 'pages')); } catch { return []; } })()) { const m = f.match(/^(.+)\.md$/); if (m && !fs.existsSync(path.join(agl, 'pages', m[1] + '.openui')) && !fs.existsSync(path.join(agl, 'pages', m[1] + '.html'))) todo.push('.agl/pages/' + f); }
@@ -20,7 +23,7 @@ function check(cwd, home = os.homedir()) {
   return ['AGL: the agl-notes skill was updated (this session acknowledged ' + (acknowledged || 'none') + ', installed ' + installed + '). Re-read the agl-notes skill before writing your pages.',
     ...(steps.length ? ['What changed:', ...steps] : []),
     ...(todo.length ? ['Migrate these files with: node ' + info.tools.migrate + ' <file> --write, check each result, then remove the old file (skip pages you made custom on purpose):', ...todo.map((t) => '- ' + t)] : []),
-    'When done, write ' + installed + ' to .agl/.skill-version so this note stops.'].join('\n');
+    'When done, write ' + installed + ' to .agl/.skill-version so this note stops.', ...(kept ? [kept] : [])].join('\n');
 }
 
 if (require.main === module) {

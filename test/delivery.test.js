@@ -32,7 +32,8 @@ test('the hook tells an AGL session once its skill is behind, lists files to mig
   await deliver({ home, extensionPath: path.join(__dirname, '..'), version: '0.8.0' });
   const note = check(path.join(root, 'repo', 'src'), home);
   assert.match(note, /acknowledged none, installed 0\.8\.0/); assert.match(note, /\.agl\/STATUS\.md/); assert.match(note, /design-a\.md/); assert.doesNotMatch(note, /done-b\.md/);
-  await fs.writeFile(path.join(root, '.agl', '.skill-version'), '0.8.0\n'); assert.equal(check(root, home), '', 'acknowledged: silent');
+  await fs.writeFile(path.join(root, '.agl', '.skill-version'), '0.8.0\n'); const after = check(root, home);
+  assert.doesNotMatch(after, /skill was updated/, 'acknowledged: no skill note'); assert.match(after, /status keeper[\s\S]*No Responsibility page/, 'keeper reminders still come');
   assert.equal(check(home, home), '', 'not an AGL session: silent');
   assert.equal(newer('0.10.0', '0.9.9'), true); assert.equal(newer('0.8.0', '0.8.0'), false);
 }));
@@ -43,3 +44,17 @@ test('migrateStatus keeps the index card and turns sections into a work item and
   assert.match(out, /m1 = Milestone\("Repos cloned", "done"\)/); assert.match(out, /m2 = Milestone\("Release", "todo"\)/);
   assert.match(out, /d1 = Delivery\("", "Baseline green", "41\/41"\)/); assert.match(out, /n1 = Callout\("needs-you"/);
 });
+
+test('keeper flags stale working, guessed times, hidden questions and missing responsibility; a tidy session passes', async () => tmp(async (base) => {
+  const { check } = require('../scripts/keeper.cjs'); const agl = path.join(base, '.agl'); await fs.mkdir(path.join(agl, 'pages'), { recursive: true });
+  const file = path.join(agl, 'STATUS.openui');
+  await fs.writeFile(file, 'root = Status("working", "x", "2030-01-01 10:00", [q1], [], [], [])\n');
+  const old = Date.now() - 3 * 3600e3; await fs.utimes(file, old / 1000, old / 1000);
+  const codes = check(base).map((c) => c.code);
+  for (const c of ['stale-working', 'future-time', 'question-hidden', 'no-responsibility']) assert.ok(codes.includes(c), c);
+  const now = new Date(); const pad = (n) => String(n).padStart(2, '0'); const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  await fs.writeFile(file, `root = Status("idle", "Tidy", "${stamp}", [], [], [], [])\n`);
+  await fs.writeFile(path.join(agl, 'pages', 'responsibility.openui'), 'root = Page("Responsibility", "s", "responsibility", "", "x", [])\n');
+  await fs.writeFile(path.join(agl, 'pages', 'design-a.openui'), 'root = Page("Design A", "s", "design", "Agent portal", "x", [])\n');
+  assert.deepEqual(check(base), []);
+}));
