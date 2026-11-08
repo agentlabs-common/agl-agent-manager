@@ -67,6 +67,7 @@ let dictation={state:'idle',text:''};
 function renderDictation(){const on=dictation.state==='listening';const button=el('dictate');button.setAttribute('aria-pressed',String(on));button.dataset.state=on?'recording':'idle';button.title=on?'Stop and send dictation':'Dictate: speak, then press again to send';button.setAttribute('aria-label',button.title);el('dictate-cancel').hidden=!on;if(on){el('transcription').hidden=false;el('transcription-label').textContent='DICTATING · PRESS AGAIN TO SEND';el('live-partial').textContent=dictation.text||'Listening…';}}
 el('dictate').addEventListener('click',()=>{error('');send('dictate');});
 el('dictate-cancel').addEventListener('click',()=>send('cancelDictation'));
+el('portal').addEventListener('click',()=>send('openStatus'));
 window.addEventListener('keydown',event=>{if(event.key==='Escape'&&dictation.state==='listening'){event.preventDefault();send('cancelDictation');}});
 for(const tab of document.querySelectorAll('[data-tab]'))tab.addEventListener('click',()=>{
   for(const candidate of document.querySelectorAll('[data-tab]')){candidate.classList.toggle('active',candidate===tab);candidate.setAttribute('aria-pressed',String(candidate===tab));}
