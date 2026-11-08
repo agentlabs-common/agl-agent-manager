@@ -162,6 +162,11 @@ next to the real work.
   version to `.agl/.skill-version`.
 - The portal keeps showing older formats, so nothing breaks before you migrate.
 
+## Teams and lead pages
+
+- A seat names its lead as the eighth argument of `Status(...)` (`"hrms-lead"`); otherwise the portal infers it from the name (hrms-dev belongs to hrms-lead). The session list groups by team.
+- A lead's page carries only what needs the user. **Nothing rolls up by default.** To bring in one seat item, add `Pull("seat", "Q3", "why it matters")` to the ninth argument of `Status(...)`: a question ID, a work item name, a server name, or leave the item out for the seat's state and headline. It shows the seat's item live and read-only, so it never goes stale; the seat stays its only writer. `TeamStrip()` adds a line per seat, if you want one.
+
 ## Custom pages
 
 When the components can't show what you need, any page, the status page included, may be your own HTML with

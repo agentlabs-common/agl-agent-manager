@@ -14,11 +14,13 @@ const nodes = z.array(z.any());
 const propsOf = (list) => (list || []).map((n) => n && n.props).filter(Boolean);
 
 // Answers the portal already holds (sent to the kit on load); a Question with one stops asking.
+const ReadOnly = React.createContext(false);
 function useAnswer(id) {
   const read = () => (window.AGL && window.AGL.answers && window.AGL.answers[String(id || '').toUpperCase()]) || null;
+  const readOnly = React.useContext(ReadOnly);
   const [answer, setAnswer] = React.useState(read);
-  React.useEffect(() => { const on = () => setAnswer(read()); addEventListener('agl-answers', on); on(); return () => removeEventListener('agl-answers', on); }, [id]);
-  return answer;
+  React.useEffect(() => { if (readOnly) return undefined; const on = () => setAnswer(read()); addEventListener('agl-answers', on); on(); return () => removeEventListener('agl-answers', on); }, [id]);
+  return readOnly ? null : answer;
 }
 
 const Chip = ({ state, children }) => <span className={'agl-chip ' + state}>{children || LABEL[state] || state}</span>;
@@ -46,6 +48,7 @@ const Question = defineComponent({ name: 'Question', description: 'A question to
   component: ({ props }) => {
     const opts = propsOf(props.options);
     const answer = useAnswer(props.id);
+    const readOnly = React.useContext(ReadOnly);
     const [chosen, setChosen] = React.useState(props.pick);
     if (answer) {
       const waiting = answer.status === 'submitted';
@@ -66,11 +69,11 @@ const Question = defineComponent({ name: 'Question', description: 'A question to
           <span className="agl-letter">{o.letter}</span><span>{o.text} {o.letter === props.pick ? <Chip state="idle">Recommended</Chip> : null}</span></div>)}
       </div>
       <div className="agl-meta">If no answer: {props.ifSilent}</div>
-      <div className="agl-actions">
+      {readOnly ? <div className="agl-meta">Answer this on the agent's own page.</div> : <div className="agl-actions">
         <button className="agl-btn primary" data-agl-question={props.id} onClick={() => ask({ kind: 'approve', question: props.id, choice: chosen, label: pickText })}>{chosen === props.pick ? 'Approve' : 'Choose'} {chosen}</button>
         <button className="agl-btn" data-agl-question={props.id} onClick={() => ask({ kind: 'comment', question: props.id })}>Comment</button>
         <button className="agl-btn quiet agl-listen" aria-label={'Read ' + props.id + ' aloud'} onClick={() => ask({ kind: 'speak', label: `${props.id}. ${props.question} ${opts.map((o) => 'Option ' + o.letter + ': ' + o.text + '.').join(' ')} My pick: ${props.pick}.` })}><Speaker />Listen</button><StopButton />
-      </div>
+      </div>}
     </div>;
   } });
 
@@ -148,20 +151,22 @@ function History({ entries, renderNode }) {
 
 const Status = defineComponent({ name: 'Status', description: "An agent's status page, organised by work",
   props: z.object({ state: z.enum(STATES), headline: z.string().max(80), updated: z.string().describe('from the clock'),
-    needs: nodes.describe('open Question list, at most 3'), work: nodes.describe('WorkItem list'), running: nodes.describe('Running list'), history: nodes.describe('Entry list') }),
+    needs: nodes.describe('open Question list, at most 3'), work: nodes.describe('WorkItem list'), running: nodes.describe('Running list'), history: nodes.describe('Entry list'),
+    reportsTo: z.string().optional().describe("your lead's session name, if you have one"), team: nodes.optional().describe('leads: Pull and TeamStrip blocks, only what matters to the user') }),
   component: ({ props, renderNode }) => {
     const running = propsOf(props.running);
     const loud = running.filter((r) => r.health === 'down' || r.health === 'degraded');
     const needs = props.needs || [];
     return <div className="agl-page">
       <header className={'agl-card agl-rail s-' + props.state}>
-        <div className="agl-row"><Chip state={props.state} /><span className="agl-muted">Updated {props.updated}</span>
+        <div className="agl-row"><Chip state={props.state} /><span className="agl-muted">Updated {props.updated}{props.reportsTo ? ' · reports to ' + props.reportsTo : ''}</span>
           <button className="agl-btn quiet agl-listen" style={{ marginLeft: 'auto' }} aria-label="Read the headline and open questions aloud" onClick={() => ask({ kind: 'speak', label: props.headline + '. ' + (needs.length ? needs.length + ' question' + (needs.length > 1 ? 's' : '') + ' for you.' : 'Nothing needs you.') })}><Speaker />Listen</button><StopButton /></div>
         <h1 style={{ marginTop: 8 }}>{props.headline}</h1>
         {loud.length ? <p style={{ color: 'var(--agl-needs-you)', fontWeight: 600, marginTop: 8 }}>{loud.length} server{loud.length > 1 ? 's' : ''} {loud.map((r) => r.health).join(', ')}: {loud.map((r) => r.what).join(', ')}</p> : null}
         {!needs.length ? <p className="agl-meta" style={{ color: 'var(--agl-done)', marginTop: 8 }}>Nothing needs you.</p> : null}
       </header>
       {needs.length ? <section className="agl-card attention"><h2>Needs you ({needs.length})</h2>{renderNode(needs)}</section> : null}
+      {(props.team || []).length ? <section className="agl-card"><h2>From the team</h2>{renderNode(props.team)}</section> : null}
       {renderNode(props.work)}
       {running.length ? <section className="agl-card"><h2>Workspace</h2><div className="agl-scroll"><table className="agl-table"><thead><tr><th>Health</th><th>What</th><th>Where</th><th>Since</th></tr></thead><tbody>{renderNode(props.running)}</tbody></table></div></section> : null}
       {(props.history || []).length ? <History entries={props.history} renderNode={renderNode} /> : null}
@@ -214,7 +219,43 @@ const Page = defineComponent({ name: 'Page', description: 'A document page: titl
     {renderNode(props.blocks)}
   </div> });
 
-const ALL = [Status, Page, Section, Text, Bullets, Table, Code, Callout, WorkItem, Milestone, Delivery, Question, Option, Running, Entry, Figure];
+// ---- Lead pages: pull a seat's item in, live, by reference ----
+const Block = defineComponent({ name: 'Block', description: 'Internal: holds pulled statements', props: z.object({ items: nodes }), component: ({ props, renderNode }) => <>{renderNode(props.items)}</> });
+function subtree(program, item) {
+  const lines = String(program).split('\n'); const byName = {};
+  for (const l of lines) { const m = l.match(/^\s*([A-Za-z_]\w*)\s*=/); if (m && m[1] !== 'root') byName[m[1]] = l; }
+  const quoted = JSON.stringify(item);
+  const start = Object.keys(byName).find((n) => ['Question', 'WorkItem', 'Running'].some((c) => byName[n].includes('= ' + c + '(' + quoted)));
+  if (!start) return null;
+  const seen = new Set(); const walk = (n) => { if (seen.has(n) || !byName[n]) return; seen.add(n); for (const id of byName[n].replace(/"(?:[^"\\]|\\.)*"/g, '').match(/[A-Za-z_]\w*/g) || []) walk(id); };
+  walk(start);
+  return { start, text: [...seen].map((n) => byName[n]).join('\n') };
+}
+function useRead(what, arg) { const [data, setData] = React.useState(undefined); React.useEffect(() => { let live = true; if (window.AGL && window.AGL.get) window.AGL.get(what, arg).then((d) => { if (live) setData(d); }); return () => { live = false; }; }, [what, arg]); return data; }
+const SeatLink = ({ s, children }) => <a href="#" onClick={(e) => { e.preventDefault(); window.AGL && window.AGL.open(s.agent, s.folder); }}>{children}</a>;
+const Pull = defineComponent({ name: 'Pull', description: "Leads: show one seat's item here, live. seat is the session name; item is a question ID, work item name or server name, or empty for the seat's state and headline",
+  props: z.object({ seat: z.string(), item: z.string().optional(), note: z.string().optional() }),
+  component: ({ props }) => {
+    const s = useRead('session', props.seat);
+    if (s === undefined) return <p className="agl-meta">Reading {props.seat}…</p>;
+    if (s === null) return <p className="agl-meta">{props.seat}: no such session.</p>;
+    const head = <div className="agl-row"><Chip state={s.state} /><b><SeatLink s={s}>{s.name}</SeatLink></b>{props.note ? <span className="agl-muted">{props.note}</span> : null}</div>;
+    const sub = props.item ? subtree(s.program, props.item) : null;
+    return <div className="agl-pull">{head}
+      {!props.item ? <p style={{ marginTop: 4 }}>{s.headline}</p> : sub ? <ReadOnly.Provider value={true}><Renderer response={'root = Block([' + sub.start + '])\n' + sub.text} library={blockLibrary} isStreaming={false} /></ReadOnly.Provider> : <p className="agl-meta">"{props.item}" is no longer on {s.name}'s status page.</p>}
+    </div>;
+  } });
+const TeamStrip = defineComponent({ name: 'TeamStrip', description: 'Leads: one line per seat that reports to you, live. Add it only if you want it on your page', props: z.object({}),
+  component: () => {
+    const all = useRead('sessions', '');
+    if (!all) return <p className="agl-meta">Reading the team…</p>;
+    const me = window.AGL && window.AGL.me; const prefix = String(me || '').replace(/-lead$/, '') + '-';
+    const seats = all.filter((s) => s.name !== me && (s.reportsTo === me || (!s.reportsTo && String(me).endsWith('-lead') && s.name.startsWith(prefix))));
+    return <div className="agl-scroll"><table className="agl-table"><tbody>{seats.map((s) => <tr key={s.name} className={'s-' + s.state}><td><Chip state={s.state} /></td><td><SeatLink s={s}>{s.name}</SeatLink></td><td>{s.headline}</td></tr>)}</tbody></table></div>;
+  } });
+
+const ALL = [Status, Page, Section, Text, Bullets, Table, Code, Callout, WorkItem, Milestone, Delivery, Question, Option, Running, Entry, Figure, Pull, TeamStrip, Block];
+const blockLibrary = createLibrary({ root: 'Block', components: ALL });
 export const library = createLibrary({ root: 'Status', components: ALL });
 export const pageLibrary = createLibrary({ root: 'Page', components: ALL });
 

@@ -132,3 +132,23 @@ test('migrate turns a Markdown page into an OpenUI page that parses cleanly',{sk
  const r=createParser(lib.toJSONSchema(),lib.root).parse(program);assert.deepEqual(r.meta.unresolved||[],[]);assert.equal(r.root.typeName||r.root.type||'Page',r.root.typeName||r.root.type||'Page');
  for(const n of ['Bullets(["a", "b more b"])','Table(["A", "B"], [["1", "2"]])','Code("code here")','Callout("idle", "note")','Figure("<svg viewBox=\\"0 0 10 10\\">\\n<rect/>\\n</svg>", "")',', 3)'])assert.ok(program.includes(n),n);
 });
+
+test('session list groups by team, and the read API returns cards and a seat\'s program',async()=>{
+ const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-team-')));
+ try{
+  const mk=async(name,status)=>{const r=path.join(base,name);await fs.mkdir(path.join(r,'.agl'),{recursive:true});await fs.writeFile(path.join(r,'.agl','STATUS.openui'),status);return{agent:'claude',folder:name,name,sessionRoot:r};};
+  const lead=await mk('hrms-lead','root = Status("working", "Lead", "2026-11-08 13:00", [], [], [], [])\n');
+  const dev=await mk('hrms-dev','root = Status("needs-you", "Pick", "2026-11-08 13:00", [q], [], [], [], "hrms-lead")\nq = Question("Q1", "W", "t", "Deploy?", [], "A", "x")\n');
+  const idle=await mk('hrms-tester','root = Status("idle", "Waiting", "2026-11-08 13:00", [], [], [], [])\n');
+  const solo=await mk('solo','root = Status("working", "Other", "2026-11-08 13:00", [], [], [], [])\n');
+  assert.equal((await notes.readNotes(dev.sessionRoot)).reportsTo,'hrms-lead');
+  const portal=createPortal({listSessions:async()=>[lead,dev,idle,solo]});
+  try{
+   const home=await (await fetch(await portal.url())).text();const main=home.slice(home.indexOf('<main>'));
+   assert.ok(main.indexOf('Needs you (1)')<main.indexOf('>hrms<'),'needs-you first');assert.match(main,/<details class="rest"><summary>1 idle<\/summary>/);assert.match(main,/Other sessions/);assert.equal((main.match(/class="dot /g)||[]).length,2,'lead shows a dot per seat');
+   const api=await portal.url('api','session');const seat=await (await fetch(api+'?name=hrms-dev')).json();assert.equal(seat.state,'needs-you');assert.match(seat.program,/Question\("Q1"/);
+   assert.equal(await (await fetch(api+'?name=nobody')).json(),null);
+   const all=await (await fetch(await portal.url('api','sessions'))).json();assert.equal(all.length,4);assert.equal(all.find(s=>s.name==='hrms-dev').reportsTo,'hrms-lead');assert.equal(all[0].program,undefined,'list carries no page content');
+  }finally{await portal.close();}
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});
