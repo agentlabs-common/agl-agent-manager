@@ -65,3 +65,18 @@ test('a page can ask to read a question aloud; the portal speaks it, and an empt
   assert.match(withKit('<head></head>'),/Read this question aloud/,'kit adds a Listen button to each question');
  }finally{await portal.close();}
 });
+
+test('answers already given reach the page, so answered questions stop asking',async()=>{
+ const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-ans-')));
+ try{
+  const root=path.join(base,'s');await fs.mkdir(path.join(root,'.agl','pages'),{recursive:true});
+  await fs.writeFile(path.join(root,'.agl','STATUS.html'),'<html><head><title>Status</title><meta name="agl:state" content="needs-you"></head><body></body></html>');
+  await notes.addReview(root,{page:'questions',kind:'yes',text:'Q8: A — Try OpenUI'});await notes.addReview(root,{page:'STATUS',kind:'comment',text:'Q2: option B with guidelines'});await notes.addReview(root,{page:'STATUS',kind:'comment',text:'general remark </script>'});
+  const portal=createPortal({listSessions:async()=>[{agent:'claude',folder:'s',name:'s',sessionRoot:root}]});
+  try{
+   const view=await (await fetch(await portal.url('s','claude','s'))).text();const a=JSON.parse(view.match(/const A=(\[.*?\]);/)[1]);
+   assert.deepEqual(a.map(x=>[x.question,x.choice,x.kind,x.status]),[['Q8','A','yes','submitted'],['Q2','B','comment','submitted']],'answers from every page, not only this one');
+   assert.doesNotMatch(view.match(/const A=.*?;/)[0],/<\/script>/);
+  }finally{await portal.close();}
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});
