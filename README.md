@@ -12,13 +12,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.8.0.vsix**.
+2. Select **claude-folder-agents-0.9.0.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.8.0.vsix --force`
+`code --install-extension claude-folder-agents-0.9.0.vsix --force`
 
 ## Claude workspace trust
 
@@ -98,6 +98,11 @@ Each session keeps its pages in `.agl/`: `STATUS.openui` (its status page), `FAC
 - **Answering:** a question's buttons only ask. The portal shows its own box with the exact text, and only your click records it in `.agl/reviews.json`. Answered questions are marked at once; agents that wait in the background pick the answer up straight away.
 - **Listen** reads a question aloud, generated live with Gemini (`tts.py`); **Stop audio** beside it, or in the top bar, stops any speech, including the voice hooks' queue (`~/.claude/hooks/hush.sh` when present). Answering also stops it.
 - Agent pages run sealed off in a sandbox: they can use JavaScript, but have no network, no forms and cannot approve anything themselves.
+
+- **The session list** groups sessions by team (a seat names its lead, or the portal infers it from the name), needs-you first, with **Open questions** across all sessions and **Feature requests** (why agents went beyond the standard components).
+- **Status keeper:** plain checks of each agent's pages against the status guide. You see them on the list and on the agent's page; the agent hears them at its next prompt.
+- **Lead pages** carry only what the lead pulls in (`Pull`), live and read-only. **Approvals** keep a fingerprint: a page changed after you approved it shows a warning.
+- Containers labelled `agl.session=<agent>/<name>` show live on the status page. Agents may add their own HTML and JavaScript in a sandboxed `Custom` block, with Chart.js as a shared library.
 
 **Delivery on every update.** On start (so after every update) the extension installs its skills as whole folders stamped with its version into `~/.claude/skills` and `~/.agents/skills` (never replacing a skill it did not install), copies the agent tools to `~/.config/agentlabs/agl/`, writes `~/.config/agentlabs/agl/agent-portal.json` (version, portal address, formats, migrations), and adds one `UserPromptSubmit` hook to `~/.claude/settings.json` (a backup is kept as `settings.json.agl-backup`). The hook tells an agent at its next prompt when its skill is newer than the one it last acknowledged, and lists the files to migrate with `agl-migrate.cjs`.
 
