@@ -12,13 +12,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.7.16.vsix**.
+2. Select **claude-folder-agents-0.7.18.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.7.16.vsix --force`
+`code --install-extension claude-folder-agents-0.7.18.vsix --force`
 
 ## Claude workspace trust
 
@@ -152,7 +152,7 @@ Click a reply in either tab to hear it with the selected Gemini TTS voice.
 Connection status, microphone controls, settings, playback controls, and the composer are grouped at the bottom.
 Action buttons use compact icons. Hover for a tooltip; each button also has an accessible label.
 
-**Dictate** is plain speech-to-text, the same Deepgram streamer as Herdr dictation (`~/.claude/hooks/stt-stream.py`, key in `~/.claude/hooks/tts.conf`). Press it to start; your words appear above the composer. Press it again to send the text to the agent. It works with or without Gemini Live; a connected Live session pauses its microphone while you dictate. For Gemini-edited prompts that wait in the composer, choose **Review** in the Live delivery menu.
+**Dictate** is plain speech-to-text, the same Deepgram streamer as Herdr dictation (`~/.claude/hooks/stt-stream.py`, key in `~/.claude/hooks/tts.conf`). Press it to start; your words appear above the composer. Press it again to send the text to the agent. To throw it away instead, press **✕** next to it or Esc. It works with or without Gemini Live; a connected Live session pauses its microphone while you dictate. For Gemini-edited prompts that wait in the composer, choose **Review** in the Live delivery menu.
 Gemini turns your spoken thought into a lightly polished draft. Edit it and select **Send** when ready.
 In **Auto-send polished prompt** mode, complete spoken prompts go directly to the selected agent terminal.
 Typed prompts are sent as written. **Interrupt** sends Ctrl+C to the terminal.
