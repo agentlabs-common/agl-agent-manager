@@ -73,14 +73,32 @@ def listing(cwd,managed_roots=None):
         if not UUID.fullmatch(sid):continue
         meta=metadata(sid)
         item.update(pid=meta.get('pid'),procStart=meta.get('procStart'),tmux=meta.get('tmux'),cwd=actual)
-        item['live']=(process_alive(meta) if meta.get('pid') else True) if item.get('kind')=='interactive' else item.get('state') not in ('failed','stopped','completed','exited')
-        if not item['live'] and item.get('kind')=='interactive':item['state']='closed'
+        # A background session is running only while Claude Code reports a status (busy, idle or waiting); a stopped one keeps
+        # its last state ('blocked', 'done') with no status and no process.
+        item['live']=(process_alive(meta) if meta.get('pid') else True) if item.get('kind')=='interactive' else bool(item.get('status')) and item.get('state') not in ('failed','stopped','completed','exited')
+        if not item['live']:item['state']='closed' if item.get('kind')=='interactive' else 'not running'
         out.append(item)
     known={item['sessionId'] for item in out}
     for value in (allowed if allowed is not None else [cwd]):
         for item in saved_sessions(value,descendants=allowed is not None):
             if item['sessionId'] not in known:out.append(item);known.add(item['sessionId'])
+    mark_older_copies(out)
     return out
+
+# Copies of one agent (same name, same folder, e.g. left by the old YOLO restart or kept as a transcript after `claude rm`)
+# show once: the running row, else the newest. The others are marked older and hidden; a running row is never marked.
+def mark_older_copies(rows):
+    groups={}
+    for row in rows:
+        name=' '.join(str(row.get('name') or '').split()).lower()
+        if name:groups.setdefault((row.get('cwd'),name),[]).append(row)
+    for group in groups.values():
+        if len(group)<2:continue
+        stamp=lambda row:float(row.get('updatedAt') or (row.get('startedAt') or 0)/1000 or 0)
+        keep=max(group,key=lambda row:(bool(row.get('live')),stamp(row)))
+        for row in group:
+            if row is not keep and not row.get('live'):row['olderCopy']=True
+
 def transcript(sid):
     if not UUID.fullmatch(sid):raise ValueError('Invalid Claude session ID')
     hits=glob.glob(os.path.expanduser('~/.claude/projects/*/'+sid+'.jsonl'))
