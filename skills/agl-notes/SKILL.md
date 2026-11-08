@@ -51,6 +51,7 @@ diffs or command output longer than 5 lines. Name where a secret lives instead.
   `.agl-chip` (`needs-you`, `working`, `done`, `blocked`, `idle`), `.agl-decision` (with `.agl-from`,
   `.agl-q`), `.agl-btn` (`.primary`), `.agl-table`, `.agl-timeline` (`<li><time>…</time><span>…</span>`),
   `.agl-figure` (an inline `<svg>` plus `<figcaption>`), `.agl-muted`, `.agl-scroll`.
+- **Links open in a new tab**, through the portal, and only for this machine's addresses (`*.localhost`, `127.0.0.1`): `[Desk board](http://git.localhost/desk)` in OpenUI text, or a plain `<a href>` in HTML. Other web addresses stay as text.
 - **Buttons only ask.** `<button class="agl-btn" data-agl-ask="approve" data-agl-question="Q7"
   data-agl-choice="A" data-agl-label="what is being approved">` makes the portal show its own box
   with that text; only the user's click there records it. `data-agl-ask="comment"` asks for a

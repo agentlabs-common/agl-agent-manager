@@ -188,7 +188,7 @@ function inline(text) {
     else if (m[2]) out.push(<code key={k++}>{m[2]}</code>);
     else if (m[5]) out.push(<em key={k++}>{m[5]}</em>);
     else if (m[3]) { const slug = (m[4].match(/^(?:\.\.?\/)*(?:\.agl\/)?(?:pages\/)?([a-z0-9][a-z0-9-]*|STATUS|FACTS)(?:\.(?:md|html|openui))?$/) || [])[1];
-      out.push(slug ? <a key={k++} href={'#' + slug} onClick={(e) => { e.preventDefault(); window.AGL && window.AGL.go && window.AGL.go(slug); }}>{m[3]}</a> : <span key={k++} title={m[4]}>{m[3]}</span>); }
+      out.push(slug ? <a key={k++} href={'#' + slug} onClick={(e) => { e.preventDefault(); window.AGL && window.AGL.go && window.AGL.go(slug); }}>{m[3]}</a> : /^https?:\/\//.test(m[4]) ? <a key={k++} href={m[4]} target="_blank" rel="noopener">{m[3]}</a> : <span key={k++} title={m[4]}>{m[3]}</span>); }
     last = re.lastIndex;
   }
   if (last < text.length) out.push(text.slice(last));
