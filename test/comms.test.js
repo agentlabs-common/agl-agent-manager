@@ -59,7 +59,7 @@ test('the portal shows contacts and conversations, and only its own form decides
       assert.equal(res.status, 303); assert.doesNotMatch(res.headers.get('location'), /evil/); assert.equal(comms.isAllowed(store, DEV, LEAD), true);
       assert.equal((await fetch(new URL(await portal.url()).origin + '/wrong/contact', { method: 'POST' })).status, 404, 'needs the token');
       comms.send(store, LEAD, DEV, 'Run the <gate>');
-      const conv = await (await fetch(await portal.url('s', 'claude', 'hrms-dev') + '?p=CONVERSATIONS')).text(); assert.match(conv, /With claude\/hrms-lead/); assert.match(conv, /Run the &lt;gate&gt;/); assert.match(conv, /Conversations \(1\)/);
+      const conv = await (await fetch(await portal.url('s', 'claude', 'hrms-dev') + '?p=CONVERSATIONS')).text(); assert.match(conv, />claude\/hrms-lead<\/a>/); assert.match(conv, /Run the &lt;gate&gt;/); assert.match(conv, /Conversations \(1\)/);
     } finally { await portal.close(); }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
@@ -154,4 +154,20 @@ test('an agent with allowed contacts and no fresh heartbeat is told to listen, a
     const portal = createPortal({ commsDir: store, listSessions: async () => [{ agent: 'claude', folder: 'hrms-dev', name: 'hrms-dev', sessionRoot: root }] });
     try { assert.match(await (await fetch(await portal.url())).text(), />not listening</); comms.heartbeat(store, DEV); assert.doesNotMatch(await (await fetch(await portal.url())).text(), />not listening</); assert.doesNotMatch(check(root, home), /not listening/); assert.equal(comms.needsListener(store, DEV, Date.now() + comms.LISTEN_FRESH_MS + 1000), true, 'a stale heartbeat counts as not listening'); } finally { await portal.close(); }
   } finally { fs.rmSync(home, { recursive: true, force: true }); }
+});
+
+test('Conversations lists each agent talked with, newest first with unread counts, and opens one thread', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-conv-')); const { createPortal } = require('../portal.cjs');
+  try {
+    const root = path.join(dir, 's'); fs.mkdirSync(path.join(root, '.agl'), { recursive: true }); fs.writeFileSync(path.join(root, '.agl', 'STATUS.openui'), 'root = Status("idle", "x", "2026-11-08 15:00", [], [], [], [])\n');
+    const store = path.join(dir, 'store'); for (const o of [LEAD, OTHER]) { comms.request(store, DEV, o, 'r'); comms.decide(store, DEV, o, 'allowed'); }
+    comms.send(store, LEAD, DEV, 'older <b>', new Date('2026-11-08T10:00:00Z')); comms.send(store, DEV, OTHER, 'mine', new Date('2026-11-08T10:01:00Z')); comms.send(store, OTHER, DEV, 'newer', new Date('2026-11-08T10:02:00Z')); comms.send(store, OTHER, DEV, 'newest', new Date('2026-11-08T10:03:00Z'));
+    const portal = createPortal({ commsDir: store, listSessions: async () => [{ agent: 'claude', folder: 'hrms-dev', name: 'hrms-dev', sessionRoot: root }] });
+    try {
+      const base = await portal.url('s', 'claude', 'hrms-dev') + '?p=CONVERSATIONS';
+      const list = await (await fetch(base)).text(); const main = list.slice(list.indexOf('<h2>Conversations'));
+      assert.ok(main.indexOf(OTHER) < main.indexOf(LEAD), 'newest first'); assert.match(main, /2 unread/); assert.match(main, /1 unread/); assert.doesNotMatch(main, /class="thread"/, 'the list shows no thread');
+      const one = await (await fetch(base + '&w=' + encodeURIComponent(LEAD))).text(); assert.match(one, /With claude\/hrms-lead/); assert.match(one, /older &lt;b&gt;/); assert.doesNotMatch(one, /newest/, 'only that pair'); assert.match(one, /All conversations/);
+    } finally { await portal.close(); }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
