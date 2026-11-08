@@ -81,6 +81,7 @@ window.addEventListener('message',event=>{
   else if(message.type==='live'){live=message;renderLive();}
   else if(message.type==='skills')renderSkills(message);
   else if(message.type==='notes')renderNotes(message);
+  else if(message.type==='theme'){document.body.classList?.add('agent-tint');document.body.style&&(document.body.style.background=message.gradient);document.body.title='Agent: '+message.name;}
   else if(message.type==='dictation'){dictation=message;renderDictation();if(message.state!=='listening')renderLive();}
   else if(message.type==='draft'){el('prompt').value=message.text;el('prompt').focus();}
   else if(message.type==='sent'){el('prompt').value='';sending=false;el('send').disabled=false;error('');}

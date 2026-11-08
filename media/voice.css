@@ -26,3 +26,4 @@ header>.header-actions{display:flex;flex-direction:row;gap:5px;flex:none}
 #dictate[data-state="recording"]{color:var(--vscode-errorForeground,#f48771);border-color:currentColor}
 .full-reply{margin-top:6px}.full-reply summary{cursor:pointer;font-size:11px;color:var(--muted)}.full-reply p{margin-top:6px}
 .note-body{font-size:13px;line-height:1.6;overflow-wrap:anywhere}.note-body table{border-collapse:collapse;margin:6px 0}.note-body th,.note-body td{border:1px solid var(--line);padding:3px 8px;text-align:left}.note-body pre{white-space:pre-wrap;font:12px/1.6 var(--vscode-editor-font-family,monospace)}.note-body svg{max-width:100%;height:auto}
+body.agent-tint{color-scheme:dark;--fg:#eef2f8;--muted:#c3cad6;--line:rgba(255,255,255,.2);--surface:rgba(0,0,0,.24);--accent:#b9cdff;color:var(--fg)}body.agent-tint textarea,body.agent-tint select{background:rgba(0,0,0,.28);color:var(--fg)}
