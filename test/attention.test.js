@@ -5,3 +5,6 @@ test('attention dots: permission prompts and blocked agents are urgent; a finish
  r=a.update([{key:'w',status:'idle',state:'done'},{key:'v',status:'idle'}],key=>key==='v');assert.deepEqual(r.get('w'),{reason:'New reply',urgent:false});assert.ok(!r.has('v'),'reply seen on screen is not unread');
  a.seen('w');assert.ok(!a.update([{key:'w',status:'idle',state:'done'}]).has('w'));
  a.update([{key:'w',status:'busy'}]);assert.ok(a.update([{key:'w',status:'idle'}]).has('w'));a.update([{key:'w',status:'busy'}]);assert.ok(!a.unread.has('w'),'starting work again clears unread');});
+test('a running agent with portal contacts but no listener gets a quiet dot, after more urgent reasons',()=>{const a=new Attention();
+ const r=a.update([{key:'q',status:'idle',notListening:true},{key:'p',status:'waiting',notListening:true},{key:'ok',status:'idle',notListening:false}]);
+ assert.deepEqual(r.get('q'),{reason:'Not listening for portal messages',urgent:false,quiet:true});assert.equal(r.get('p').reason,'Waiting for your permission');assert.ok(!r.has('ok'));});
