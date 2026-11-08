@@ -23,7 +23,8 @@ const Option = defineComponent({ name: 'Option', description: 'One lettered answ
 
 const Question = defineComponent({ name: 'Question', description: 'A question to the user, inside its work item',
   props: z.object({ id: z.string().describe('Q7'), work: z.string(), asked: z.string().describe('when and where'), question: z.string(),
-    options: nodes.describe('Option list'), pick: z.string().describe('your pick, a letter'), ifSilent: z.string().describe('what happens if nobody answers') }),
+    options: nodes.describe('Option list'), pick: z.string().describe('your pick, a letter'), ifSilent: z.string().describe('what happens if nobody answers'),
+    diagram: z.string().optional().describe('optional inline <svg> that helps the user decide') }),
   component: ({ props, renderNode }) => {
     const opts = (props.options || []).map((o) => o && o.props).filter(Boolean);
     const answer = useAnswer(props.id);
@@ -35,6 +36,7 @@ const Question = defineComponent({ name: 'Question', description: 'A question to
     return <div className="agl-decision" data-agl-managed="">
       <span className="agl-from">{props.id} · {props.work} · {props.asked}</span>
       <span className="agl-q">{props.question}</span>
+      {props.diagram ? <Svg markup={props.diagram} /> : null}
       <span>{renderNode(props.options)}</span>
       <span><b>My pick: {props.pick}.</b> If no answer: {props.ifSilent}</span>
       <div className="agl-row">
@@ -45,6 +47,15 @@ const Question = defineComponent({ name: 'Question', description: 'A question to
       </div>
     </div>;
   } });
+
+// Inline SVG from the agent; the page is sandboxed with no network, so markup can't reach anything.
+function Svg({ markup, caption }) {
+  if (!/^\s*<svg[\s>]/i.test(markup || '')) return null;
+  return <figure className="agl-figure"><div dangerouslySetInnerHTML={{ __html: markup }} />{caption ? <figcaption>{caption}</figcaption> : null}</figure>;
+}
+const Figure = defineComponent({ name: 'Figure', description: 'A diagram: inline <svg> with a viewBox, role="img" and aria-label, plus a caption',
+  props: z.object({ svg: z.string(), caption: z.string() }),
+  component: ({ props }) => <Svg markup={props.svg} caption={props.caption} /> });
 
 const Milestone = defineComponent({ name: 'Milestone', description: 'One milestone the user would recognise',
   props: z.object({ label: z.string(), status: z.enum(['done', 'current', 'todo']) }),
@@ -88,7 +99,7 @@ const Status = defineComponent({ name: 'Status', description: "An agent's status
     <section className="agl-card"><h2>History</h2><ul className="agl-timeline">{renderNode(props.history)}</ul></section>
   </div> });
 
-export const library = createLibrary({ root: 'Status', components: [Status, WorkItem, Milestone, Delivery, Question, Option, Running, Entry] });
+export const library = createLibrary({ root: 'Status', components: [Status, WorkItem, Milestone, Delivery, Question, Option, Running, Entry, Figure] });
 
 function Errors({ errors }) {
   if (!errors.length) return null;

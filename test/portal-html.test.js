@@ -80,3 +80,23 @@ test('answers already given reach the page, so answered questions stop asking',a
   }finally{await portal.close();}
  }finally{await fs.rm(base,{recursive:true,force:true});}
 });
+
+test('every session page has one Stop audio button, outside the page, that stops all speech',async()=>{
+ const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-stop-')));
+ try{
+  const root=path.join(base,'s');await fs.mkdir(path.join(root,'.agl'),{recursive:true});await fs.writeFile(path.join(root,'.agl','STATUS.md'),'---\nstate: idle\nheadline: x\n---\n');
+  const said=[];const portal=createPortal({listSessions:async()=>[{agent:'claude',folder:'s',name:'s',sessionRoot:root}],speak:t=>{said.push(t);return t?'speaking':'stopped';}});
+  try{const view=await (await fetch(await portal.url('s','claude','s'))).text();assert.equal(view.match(/id="agl-stop"/g).length,1);assert.match(view,/body:"text="/,'stop sends empty text');}finally{await portal.close();}
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});
+
+test('STATUS.openui is the status page; its root Status(...) line is the index card',async()=>{
+ const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-oui-')));
+ try{
+  const root=path.join(base,'s');await fs.mkdir(path.join(root,'.agl'),{recursive:true});
+  await fs.writeFile(path.join(root,'.agl','STATUS.html'),'<html><head><meta name="agl:state" content="idle"></head></html>');
+  await fs.writeFile(path.join(root,'.agl','STATUS.openui'),'root = Status("needs-you", "Agent portal: say \\"yes\\" to Q9", "2026-11-08 12:40", [], [], [], [])\n');
+  const n=await notes.readNotes(root);assert.equal(n.statusFormat,'openui');assert.equal(n.state,'needs-you');assert.equal(n.headline,'Agent portal: say "yes" to Q9');assert.equal(n.updated,'2026-11-08 12:40');
+  const html=await notes.readHtml(root,'STATUS');assert.match(html,/<textarea id="openui-program" hidden>root = Status\(&quot;|<textarea id="openui-program" hidden>root = Status\("/);assert.doesNotMatch(html.slice(0,html.indexOf('<script>')),/<\/textarea>.*<\/textarea>/s);
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});
