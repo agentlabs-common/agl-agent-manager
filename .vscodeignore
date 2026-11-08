@@ -9,6 +9,9 @@ __pycache__/**
 !scripts/agl-migrate.cjs
 !scripts/agl-skill-check.cjs
 !scripts/keeper.cjs
+!scripts/comms.cjs
+!scripts/agl-talk.cjs
+!scripts/waker.cjs
 openui/node_modules/**
 openui/src/**
 openui/package*.json

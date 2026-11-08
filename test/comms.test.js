@@ -44,3 +44,40 @@ test('agl-talk works out who is asking from the session folder', () => tmp((dir)
   run('contacts'); assert.match(lines.pop(), /claude\/hrms-lead {2}allowed/);
   assert.ok(comms.listeningAt(store, DEV) > 0, 'checking the inbox leaves a heartbeat');
 }));
+
+test('the portal shows contacts and conversations, and only its own form decides', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-comms-p-')); const { createPortal } = require('../portal.cjs');
+  try {
+    const root = path.join(dir, 's'); fs.mkdirSync(path.join(root, '.agl'), { recursive: true }); fs.writeFileSync(path.join(root, '.agl', 'STATUS.openui'), 'root = Status("idle", "x", "2026-11-08 15:00", [], [], [], [])\n');
+    const store = path.join(dir, 'store'); const portal = createPortal({ commsDir: store, listSessions: async () => [{ agent: 'claude', folder: 'hrms-dev', name: 'hrms-dev', sessionRoot: root }] });
+    try {
+      comms.request(store, DEV, LEAD, 'my lead <b>');
+      const home = await (await fetch(await portal.url())).text(); assert.match(home, /Contact requests \(1\)/);
+      const pending = await (await fetch(await portal.url('contacts'))).text(); assert.match(pending, /my lead &lt;b&gt;/);
+      const page = await (await fetch(await portal.url('s', 'claude', 'hrms-dev') + '?p=CONTACTS')).text(); assert.match(page, /Waiting for you/); assert.match(page, /Contacts \(1 to decide\)/); assert.doesNotMatch(page, /details class="reviews"/);
+      const res = await fetch(await portal.url('contact'), { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ a: DEV, b: LEAD, status: 'allowed', back: 'https://evil.example/' }) });
+      assert.equal(res.status, 303); assert.doesNotMatch(res.headers.get('location'), /evil/); assert.equal(comms.isAllowed(store, DEV, LEAD), true);
+      assert.equal((await fetch(new URL(await portal.url()).origin + '/wrong/contact', { method: 'POST' })).status, 404, 'needs the token');
+      comms.send(store, LEAD, DEV, 'Run the <gate>');
+      const conv = await (await fetch(await portal.url('s', 'claude', 'hrms-dev') + '?p=CONVERSATIONS')).text(); assert.match(conv, /With claude\/hrms-lead/); assert.match(conv, /Run the &lt;gate&gt;/); assert.match(conv, /Conversations \(1\)/);
+    } finally { await portal.close(); }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('the waker wakes a stopped agent with unread messages, and never one on hold, running, or woken lately', async () => {
+  const waker = require('../scripts/waker.cjs');
+  await (async () => { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-wake-')); try {
+    const store = path.join(dir, 'store'); const root = path.join(dir, 'hrms-dev'); fs.mkdirSync(path.join(root, '.agl'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.agl-session.json'), JSON.stringify({ agent: 'claude', name: 'hrms-dev', conversations: [{ provider: 'claude', sessionId: 'old' }, { provider: 'claude', sessionId: 'sid-1' }] }));
+    const sessions = [{ agent: 'claude', folder: 'hrms-dev', name: 'hrms-dev', sessionRoot: root }]; const started = []; const start = (x) => started.push(x); const stopped = async () => ['/somewhere/else'];
+    assert.deepEqual(await waker.tick({ sessions, dir: store, running: stopped, start }), [], 'nothing unread');
+    comms.request(store, LEAD, DEV, 'seat'); comms.decide(store, LEAD, DEV, 'allowed'); comms.send(store, LEAD, DEV, 'Please run the gate');
+    assert.deepEqual(await waker.tick({ sessions, dir: store, running: async () => [path.join(root, 'repo')], start }), [], 'still running: no duplicate');
+    fs.writeFileSync(path.join(root, '.agl', '.hold'), 'x'); assert.deepEqual(await waker.tick({ sessions, dir: store, running: stopped, start }), [], 'on hold'); fs.rmSync(path.join(root, '.agl', '.hold'));
+    const [w] = await waker.tick({ sessions, dir: store, running: stopped, start }); assert.equal(w.id, DEV); assert.equal(started.length, 1); assert.equal(started[0].sessionId, 'sid-1'); assert.match(started[0].prompt, /from claude\/hrms-lead/);
+    assert.deepEqual(await waker.tick({ sessions, dir: store, running: stopped, start }), [], 'cooldown'); assert.equal(waker.wakes(store, DEV).length, 1, 'each wake is logged');
+    const later = Date.now() + waker.COOLDOWN_MS + 1000; comms.decide(store, LEAD, DEV, 'withdrawn'); assert.deepEqual(await waker.tick({ sessions, dir: store, running: stopped, start, now: later }), [], 'withdrawn contact cannot wake');
+    const jobs = path.join(dir, 'home', '.claude', 'jobs', 'j1'); fs.mkdirSync(jobs, { recursive: true }); fs.writeFileSync(path.join(jobs, 'state.json'), JSON.stringify({ linkScanPath: '/x/sid-1.jsonl', respawnFlags: ['--name', 'a', '--dangerously-skip-permissions'] }));
+    assert.deepEqual(waker.permissionFlags('sid-1', path.join(dir, 'home')), ['--dangerously-skip-permissions'], 'keeps its own mode');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); } })();
+});

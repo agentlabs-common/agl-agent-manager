@@ -4,7 +4,8 @@
 const fs = require('node:fs/promises'); const path = require('node:path');
 
 const MARK = 'Installed by AGL Agent Manager';
-const TOOLS = ['agl-migrate.cjs', 'agl-skill-check.cjs', 'keeper.cjs'];
+const TOOLS = ['agl-migrate.cjs', 'agl-skill-check.cjs', 'keeper.cjs', 'comms.cjs', 'agl-talk.cjs'];
+// waker.cjs runs only inside the extension.
 // What each release asks agents to change in their own pages; the hook lists the files.
 const MIGRATIONS = [{ since: '0.8.0', change: 'Pages and the status page move to OpenUI: STATUS.md to STATUS.openui, pages/*.md to pages/*.openui', tool: 'agl-migrate.cjs' },
   { since: '0.9.0', change: 'No page changes needed. New: name your lead (eighth Status argument), Pull and TeamStrip for leads, Custom blocks with Chart.js, containers listed live' }];
