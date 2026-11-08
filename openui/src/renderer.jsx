@@ -259,12 +259,16 @@ const TeamStrip = defineComponent({ name: 'TeamStrip', description: 'Leads: one 
     return <div className="agl-scroll"><table className="agl-table"><tbody>{seats.map((s) => <tr key={s.name} className={'s-' + s.state}><td><Chip state={s.state} /></td><td><SeatLink s={s}>{s.name}</SeatLink></td><td>{s.headline}</td></tr>)}</tbody></table></div>;
   } });
 
+// Libraries are fetched once per page, so a redraw never starts over; a failed fetch gives no library rather than waiting forever.
+const libCache = new Map(); const libPending = new Map();
+function loadLib(name) { if (libCache.has(name)) return Promise.resolve(libCache.get(name)); if (!libPending.has(name)) libPending.set(name, window.AGL.get('lib', name).then((x) => { const t = (x && x.text) || ''; libCache.set(name, t); return t; })); return libPending.get(name); }
 // A custom block with its own HTML and JavaScript, in its own sandbox: no network, no portal access.
 const Custom = defineComponent({ name: 'Custom', description: 'Your own HTML and JavaScript, for what the components cannot show. Say why in reason. libs: "chart" gives you Chart.js as window.Chart',
   props: z.object({ html: z.string(), reason: z.string(), height: z.number().optional(), libs: z.array(z.string()).optional() }),
   component: ({ props }) => {
-    const [code, setCode] = React.useState(null);
-    React.useEffect(() => { let live = true; Promise.all((props.libs || []).map((l) => window.AGL.get('lib', l))).then((all) => { if (live) setCode(all.map((x) => (x && x.text) || '').join('\n')); }); return () => { live = false; }; }, [String(props.libs)]);
+    const wanted = props.libs || [];
+    const [code, setCode] = React.useState(() => (wanted.every((l) => libCache.has(l)) ? wanted.map((l) => libCache.get(l)).join('\n') : null));
+    React.useEffect(() => { let live = true; Promise.all(wanted.map(loadLib)).then((all) => { if (live) setCode(all.join('\n')); }); return () => { live = false; }; }, [String(props.libs)]);
     if (code === null) return <p className="agl-meta">Loading…</p>;
     const doc = '<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:14px/20px system-ui,sans-serif}</style>' + (code ? '<script>' + code.replace(/<\/script/gi, '<\\/script') + '<\/script>' : '') + '</head><body>' + props.html + '</body></html>';
     return <figure className="agl-figure"><iframe title={props.reason} sandbox="allow-scripts" srcDoc={doc} style={{ width: '100%', height: (props.height || 320) + 'px', border: 0, display: 'block' }} /><figcaption>Custom: {props.reason}</figcaption></figure>;

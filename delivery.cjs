@@ -44,7 +44,7 @@ async function registerHook(home, command) {
   return 'added';
 }
 
-async function deliver({ home, extensionPath, version, portalUrl = '' }) {
+async function deliver({ home, extensionPath, version, portalUrl = '', workspaceRoot = '' }) {
   const tools = path.join(home, '.config', 'agentlabs', 'agl');
   const skillsDir = path.join(extensionPath, 'skills'); const skills = {};
   for (const name of await fs.readdir(skillsDir).catch(() => [])) {
@@ -53,7 +53,10 @@ async function deliver({ home, extensionPath, version, portalUrl = '' }) {
   }
   for (const tool of TOOLS) { const from = path.join(extensionPath, 'scripts', tool); const text = await read(from); if (text !== undefined && (await read(path.join(tools, tool))) !== text) await writeAtomic(path.join(tools, tool), text); }
   const hook = await registerHook(home, 'node ' + path.join(tools, 'agl-skill-check.cjs'));
-  const info = { app: 'agent-portal', version, portalUrl, formats: FORMATS, skills, tools: { migrate: path.join(tools, 'agl-migrate.cjs') }, migrations: MIGRATIONS, updated: new Date().toISOString() };
+  // One portal per VS Code window: agents find theirs under the workspace that holds their session folder.
+  let portals = {}; try { portals = JSON.parse(await read(path.join(tools, 'agent-portal.json')) || '{}').portals || {}; } catch {}
+  if (workspaceRoot && portalUrl) portals[workspaceRoot] = portalUrl;
+  const info = { app: 'agent-portal', version, portalUrl, portals, formats: FORMATS, skills, tools: { migrate: path.join(tools, 'agl-migrate.cjs') }, migrations: MIGRATIONS, updated: new Date().toISOString() };
   await writeAtomic(path.join(tools, 'agent-portal.json'), JSON.stringify(info, null, 2) + '\n');
   return { hook, info };
 }

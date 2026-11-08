@@ -154,8 +154,8 @@ next to the real work.
 ## Upgrades and migration
 
 - This skill's version is on its marker line (`Installed by AGL Agent Manager 0.8.0`). The plugin reinstalls it on
-  every update and writes `~/.config/agentlabs/agl/agent-portal.json`: the portal version, its address, the
-  formats it shows, and what each release asks you to change.
+  every update and writes `~/.config/agentlabs/agl/agent-portal.json`: the portal version, `portals` (one address per workspace; use the one
+  whose key holds your session folder), the formats it shows, and what each release asks you to change.
 - When the installed skill is newer than the version in your `.agl/.skill-version`, a hook adds a note to your next
   prompt listing your files to migrate. Re-read this skill, then for each listed file run
   `node ~/.config/agentlabs/agl/agl-migrate.cjs <file> --write`, check the result (a migrated status page has one

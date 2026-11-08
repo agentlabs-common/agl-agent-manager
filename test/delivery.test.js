@@ -68,3 +68,11 @@ test('feature requests come from custom blocks and custom pages; only named libr
   assert.equal(libText('nope'), ''); assert.equal(libText('__proto__'), '');
   assert.ok(withKit('<head><meta name="agl:libs" content="chart, nope"></head>').length > 100000, 'chart library inlined'); assert.ok(withKit('<head></head>').length < 100000, 'no library unless asked');
 }));
+
+test('the version file keeps one portal address per workspace', async () => tmp(async (home) => {
+  const ext = path.join(__dirname, '..');
+  await deliver({ home, extensionPath: ext, version: '0.10.0', portalUrl: 'http://127.0.0.1:1/a/', workspaceRoot: '/w/one' });
+  await deliver({ home, extensionPath: ext, version: '0.10.0', portalUrl: 'http://127.0.0.1:2/b/', workspaceRoot: '/w/two' });
+  const info = JSON.parse(await fs.readFile(path.join(home, '.config', 'agentlabs', 'agl', 'agent-portal.json'), 'utf8'));
+  assert.deepEqual(info.portals, { '/w/one': 'http://127.0.0.1:1/a/', '/w/two': 'http://127.0.0.1:2/b/' });
+}));
