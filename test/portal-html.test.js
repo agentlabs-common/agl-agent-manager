@@ -100,3 +100,21 @@ test('STATUS.openui is the status page; its root Status(...) line is the index c
   const html=await notes.readHtml(root,'STATUS');assert.match(html,/<textarea id="openui-program" hidden>root = Status\(&quot;|<textarea id="openui-program" hidden>root = Status\("/);assert.doesNotMatch(html.slice(0,html.indexOf('<script>')),/<\/textarea>.*<\/textarea>/s);
  }finally{await fs.rm(base,{recursive:true,force:true});}
 });
+
+test('sidebar groups pages under their work item; archived work moves to Archive',async()=>{
+ const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-side-')));
+ try{
+  const root=path.join(base,'s');await fs.mkdir(path.join(root,'.agl','pages'),{recursive:true});
+  await fs.writeFile(path.join(root,'.agl','STATUS.openui'),'root = Status("working", "x", "2026-11-08 13:00", [], [a, b], [], [])\na = WorkItem("Agent portal", "working", "g", [], [], "n")\nb = WorkItem("Old thing", "done", "g", [], [], "n", true)\n');
+  await fs.writeFile(path.join(root,'.agl','pages','design-x.md'),'# Design X\nsummary: s\nupdated: 2026-11-08\nwork: Agent portal\n');
+  await fs.writeFile(path.join(root,'.agl','pages','notes-y.md'),'# Old notes\nsummary: s\nupdated: 2026-11-08\nwork: Old thing\n');
+  await fs.writeFile(path.join(root,'.agl','pages','responsibility.md'),'# Responsibility\nsummary: s\n');
+  const portal=createPortal({listSessions:async()=>[{agent:'claude',folder:'s',name:'s',sessionRoot:root}]});
+  try{
+   const view=await (await fetch(await portal.url('s','claude','s'))).text();const side=view.match(/<aside class="side"[\s\S]*?<\/aside>/)[0];
+   assert.ok(side.indexOf('Responsibility')<side.indexOf('Facts'),'responsibility pinned near the top');
+   assert.match(side,/Agent portal<\/a><a class="sub" href="[^"]*\?p=design-x">Design X/);assert.doesNotMatch(side,/Old notes|Old thing<\/a><a/);assert.match(side,/Archive \(1\)/);
+   const arch=await (await fetch(await portal.url('s','claude','s')+'?p=ARCHIVE')).text();assert.match(arch,/Old thing[\s\S]*Old notes/);
+  }finally{await portal.close();}
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});

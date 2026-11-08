@@ -101,14 +101,14 @@ const Delivery = defineComponent({ name: 'Delivery', description: 'Something del
   component: ({ props }) => <li><time>{String(props.when).replace(/^\d\d-\d\d /, '')}</time><span>{props.what}<span className="agl-ev">{props.evidence}</span></span></li> });
 
 const WorkItem = defineComponent({ name: 'WorkItem', description: 'One piece of work the user gave you',
-  props: z.object({ name: z.string().describe("the user's own term"), state: z.enum(STATES), goal: z.string(), milestones: nodes, delivered: nodes, next: z.string() }),
+  props: z.object({ name: z.string().describe("the user's own term"), state: z.enum(STATES), goal: z.string(), milestones: nodes, delivered: nodes, next: z.string(), archived: z.boolean().optional().describe('true moves it out of the sidebar into Archive') }),
   component: ({ props, renderNode }) => {
     const ms = propsOf(props.milestones);
     const [all, setAll] = React.useState(false);
     const delivered = props.delivered || [];
-    if (props.state === 'idle' || props.state === 'done') return <section className={'agl-card agl-rail s-' + props.state}>
+    if (props.state === 'idle' || props.state === 'done') return <section className={'agl-card agl-rail s-' + props.state} data-agl-work={props.name} tabIndex={-1}>
       <div className="agl-row"><b>{props.name}</b><Chip state={props.state}>{props.state === 'idle' ? 'Parked' : 'Done'}</Chip><span className="agl-muted">{props.goal}</span></div></section>;
-    return <section className={'agl-card agl-rail s-' + props.state}>
+    return <section className={'agl-card agl-rail s-' + props.state} data-agl-work={props.name} tabIndex={-1}>
       <div className="agl-row" style={{ justifyContent: 'space-between' }}><div className="agl-row"><h2 style={{ margin: 0 }}>{props.name}</h2><Chip state={props.state} /></div>
         <span className="agl-muted">{ms.filter((m) => m.status === 'done').length} of {ms.length}</span></div>
       <Track milestones={ms} />

@@ -14,7 +14,8 @@ the page first.
 All paths are relative to the session folder (the one with `.agl-session.json`).
 
 ```
-.agl/STATUS.html        your status page: free HTML, with an index card (below)
+.agl/STATUS.openui      your status page, in OpenUI Lang (below); STATUS.html still works
+.agl/pages/responsibility.md   what you are responsible for: your readme, pinned in the sidebar
 .agl/FACTS.md           durable truths, edited in place, at most 150 lines
 .agl/pages/<slug>.html  proposals, designs, results, guides: free HTML (or .md), at most 8
 .agl/archive/           retired material; write here, never read unless asked
@@ -23,6 +24,24 @@ All paths are relative to the session folder (the one with `.agl-session.json`).
 
 Write only your own session's `.agl/`. Never write secrets, tokens, `.env` values, logs, stack traces,
 diffs or command output longer than 5 lines. Name where a secret lives instead.
+
+## Responsibility
+
+- Keep `.agl/pages/responsibility.md`: your role, who gave it and when, what you are responsible for, what you
+  are not, and an **Overrides** list. Read it at session start; it is your readme.
+- **Stick to it.** When asked for something outside it, say so, name who owns it if you know, and do not start.
+  Do it only when the user explicitly overrides ("do it anyway"); then add the override, dated, to the page.
+- If the page is missing or unclear, ask the user before acting, then write the answer into the page.
+
+## The sidebar: pages belong to work
+
+- The portal's sidebar shows Status, Responsibility, Questions and Facts, then one entry per work item on your
+  status page, with that work's pages under it. Give every page its work item: `work: Agent portal` as the
+  fourth line of a Markdown page, `<meta name="agl:work" content="Agent portal">` in an HTML page.
+- Use the user's own name for each piece of work. New work the user gives you becomes a work item; something
+  that belongs to existing work is added to it, not opened as a new item.
+- When the list grows, archive finished work: a `WorkItem(..., true)` (last argument) leaves the sidebar and
+  shows under Archive with its pages.
 
 ## How pages are shown
 
@@ -44,16 +63,28 @@ diffs or command output longer than 5 lines. Name where a secret lives instead.
 
 ## The status page
 
-Free HTML, but what it **says** is fixed:
+Write it in OpenUI Lang as `.agl/STATUS.openui`; the components carry these rules. Its first line is the index card:
 
-1. **Index card in `<head>`:**
-   ```html
-   <title>Status</title>
-   <meta name="agl:state" content="needs-you">
-   <meta name="agl:headline" content="Agent portal: status page built; review the guide">
-   <meta name="agl:updated" content="2026-11-08 12:25">
-   <meta name="agl:reports-to" content="hrms-lead">   <!-- seats with a lead only -->
-   ```
+```
+root = Status("needs-you", "Agent portal: review the guide", "2026-11-08 12:25", [q1], [portal], [preview], [h1, h2])
+q1 = Question("Q1", "Agent portal", "asked 2026-11-08 12:20 in chat", "Is the guide right?", [q1a, q1b], "A", "it stays a draft.")
+q1a = Option("A", "Yes; write it into the skill")
+q1b = Option("B", "Change it")
+portal = WorkItem("Agent portal", "working", "one-line goal", [m1, m2], [d1], "the next step")
+m1 = Milestone("Wireframes approved", "done")
+m2 = Milestone("Status page built", "current")
+d1 = Delivery("11-08 12:25", "what was delivered", "commit, test count or URL")
+preview = Running("Preview portal", "running", "127.0.0.1:10500", "11-08 12:00")
+h1 = Entry("11-08 12:25", "DELIVERED", "what")
+h2 = Entry("11-08 12:00", "TOOK", "what (from whom)")
+```
+
+Arguments are positional, one statement per line. `Question` takes an optional eighth argument: an inline
+`<svg>` diagram that helps the user decide. `Figure(svg, caption)` draws a diagram anywhere. Whatever the format,
+what the page **says** is fixed:
+
+1. **Index card:** state, headline and time, as in the first line above (an HTML status page uses
+   `<meta name="agl:state|agl:headline|agl:updated|agl:reports-to">`).
 2. **State** is exactly one of: `needs-you` (you need a decision, review or credential), `blocked`
    (waiting on something outside you both), `working`, `done` (verified and handed over), `idle` (no
    goal, paused or stopped). An open question means `needs-you`. Never leave a stale `working`.
@@ -118,6 +149,18 @@ wins; keep the two from disagreeing, or delete the old one.
 
 Do not re-read `.agl/` every turn. Read only the file you are about to change. Keep notes work small
 next to the real work.
+
+## Hearing answers
+
+Whenever your status page asks the user something, start a background wait that ends when an answer arrives,
+so the user's click on the portal reaches you even when you are idle:
+
+```bash
+until python3 -c "import json,sys;sys.exit(0 if any(i.get('status')=='submitted' for i in json.load(open('.agl/reviews.json')).get('items',[])) else 1)" 2>/dev/null; do sleep 5; done; echo "New answer on the agent portal"
+```
+
+Run it with your tool's background option; when it ends, handle the answers (below) and start it again if
+questions remain open.
 
 ## Answers and reviews
 
