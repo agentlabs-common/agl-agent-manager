@@ -155,7 +155,8 @@ const Status = defineComponent({ name: 'Status', description: "An agent's status
     reportsTo: z.string().optional().describe("your lead's session name, if you have one"), team: nodes.optional().describe('leads: Pull and TeamStrip blocks, only what matters to the user') }),
   component: ({ props, renderNode }) => {
     const running = propsOf(props.running);
-    const loud = running.filter((r) => r.health === 'down' || r.health === 'degraded');
+    const live = useRead('health', '') || [];
+    const loud = [...running.map((r) => ({ what: r.what, health: r.health })), ...live.map((r) => ({ what: r.name, health: r.health }))].filter((r) => r.health === 'down' || r.health === 'degraded');
     const needs = props.needs || [];
     return <div className="agl-page">
       <header className={'agl-card agl-rail s-' + props.state}>
@@ -168,7 +169,9 @@ const Status = defineComponent({ name: 'Status', description: "An agent's status
       {needs.length ? <section className="agl-card attention"><h2>Needs you ({needs.length})</h2>{renderNode(needs)}</section> : null}
       {(props.team || []).length ? <section className="agl-card"><h2>From the team</h2>{renderNode(props.team)}</section> : null}
       {renderNode(props.work)}
-      {running.length ? <section className="agl-card"><h2>Workspace</h2><div className="agl-scroll"><table className="agl-table"><thead><tr><th>Health</th><th>What</th><th>Where</th><th>Since</th></tr></thead><tbody>{renderNode(props.running)}</tbody></table></div></section> : null}
+      {running.length || live.length ? <section className="agl-card"><h2>Workspace</h2><div className="agl-scroll"><table className="agl-table"><thead><tr><th>Health</th><th>What</th><th>Where</th><th>Since</th></tr></thead><tbody>
+        {live.map((r) => <tr key={r.name} className={'s-' + HEALTH[r.health]}><td><span className="agl-row" style={{ gap: 8 }}><span className="agl-dot" />{r.health}</span></td><td>{r.name} <span className="agl-muted">live</span></td><td className="agl-mono">{r.ports || '—'}</td><td className="agl-muted">{r.status}</td></tr>)}
+        {renderNode(props.running)}</tbody></table></div></section> : null}
       {(props.history || []).length ? <History entries={props.history} renderNode={renderNode} /> : null}
     </div>;
   } });
@@ -254,7 +257,18 @@ const TeamStrip = defineComponent({ name: 'TeamStrip', description: 'Leads: one 
     return <div className="agl-scroll"><table className="agl-table"><tbody>{seats.map((s) => <tr key={s.name} className={'s-' + s.state}><td><Chip state={s.state} /></td><td><SeatLink s={s}>{s.name}</SeatLink></td><td>{s.headline}</td></tr>)}</tbody></table></div>;
   } });
 
-const ALL = [Status, Page, Section, Text, Bullets, Table, Code, Callout, WorkItem, Milestone, Delivery, Question, Option, Running, Entry, Figure, Pull, TeamStrip, Block];
+// A custom block with its own HTML and JavaScript, in its own sandbox: no network, no portal access.
+const Custom = defineComponent({ name: 'Custom', description: 'Your own HTML and JavaScript, for what the components cannot show. Say why in reason. libs: "chart" gives you Chart.js as window.Chart',
+  props: z.object({ html: z.string(), reason: z.string(), height: z.number().optional(), libs: z.array(z.string()).optional() }),
+  component: ({ props }) => {
+    const [code, setCode] = React.useState(null);
+    React.useEffect(() => { let live = true; Promise.all((props.libs || []).map((l) => window.AGL.get('lib', l))).then((all) => { if (live) setCode(all.map((x) => (x && x.text) || '').join('\n')); }); return () => { live = false; }; }, [String(props.libs)]);
+    if (code === null) return <p className="agl-meta">Loading…</p>;
+    const doc = '<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:14px/20px system-ui,sans-serif}</style>' + (code ? '<script>' + code.replace(/<\/script/gi, '<\\/script') + '<\/script>' : '') + '</head><body>' + props.html + '</body></html>';
+    return <figure className="agl-figure"><iframe title={props.reason} sandbox="allow-scripts" srcDoc={doc} style={{ width: '100%', height: (props.height || 320) + 'px', border: 0, display: 'block' }} /><figcaption>Custom: {props.reason}</figcaption></figure>;
+  } });
+
+const ALL = [Custom, Status, Page, Section, Text, Bullets, Table, Code, Callout, WorkItem, Milestone, Delivery, Question, Option, Running, Entry, Figure, Pull, TeamStrip, Block];
 const blockLibrary = createLibrary({ root: 'Block', components: ALL });
 export const library = createLibrary({ root: 'Status', components: ALL });
 export const pageLibrary = createLibrary({ root: 'Page', components: ALL });

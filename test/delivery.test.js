@@ -58,3 +58,13 @@ test('keeper flags stale working, guessed times, hidden questions and missing re
   await fs.writeFile(path.join(agl, 'pages', 'design-a.openui'), 'root = Page("Design A", "s", "design", "Agent portal", "x", [])\n');
   assert.deepEqual(check(base), []);
 }));
+
+test('feature requests come from custom blocks and custom pages; only named libraries load', async () => tmp(async (base) => {
+  const { customReasons } = require('../scripts/keeper.cjs'); const { withKit, libText } = require('../kit.cjs');
+  const pages = path.join(base, '.agl', 'pages'); await fs.mkdir(pages, { recursive: true });
+  await fs.writeFile(path.join(pages, 'design-a.openui'), 'root = Page("A", "s", "design", "W", "x", [c])\nc = Custom("<div></div>", "needs a \\"gantt\\" chart", 240, ["chart"])\n');
+  await fs.writeFile(path.join(pages, 'plan-b.html'), '<html><head><meta name="agl:custom" content="needs drag and drop"></head></html>');
+  assert.deepEqual(customReasons(base).sort((a, b) => a.page.localeCompare(b.page)), [{ page: 'design-a', reason: 'needs a "gantt" chart' }, { page: 'plan-b', reason: 'needs drag and drop' }]);
+  assert.equal(libText('nope'), ''); assert.equal(libText('__proto__'), '');
+  assert.ok(withKit('<head><meta name="agl:libs" content="chart, nope"></head>').length > 100000, 'chart library inlined'); assert.ok(withKit('<head></head>').length < 100000, 'no library unless asked');
+}));

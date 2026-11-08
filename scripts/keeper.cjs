@@ -56,4 +56,14 @@ function check(sessionRoot, now = Date.now()) {
   return out;
 }
 
-module.exports = { check, statusOf };
+// Why agents went custom: each reason is a feature request for the next plugin version.
+function customReasons(sessionRoot) {
+  const dir = path.join(sessionRoot, '.agl', 'pages'); const out = [];
+  const files = (() => { try { return fs.readdirSync(dir); } catch { return []; } })().map((f) => path.join(dir, f)); files.push(path.join(sessionRoot, '.agl', 'STATUS.openui'), path.join(sessionRoot, '.agl', 'STATUS.html'));
+  for (const f of files) { const t = read(f); if (t === undefined) continue; const page = path.basename(f).replace(/\.\w+$/, '');
+    if (f.endsWith('.openui')) for (const m of t.matchAll(/=\s*Custom\(\s*"(?:[^"\\]|\\.)*"\s*,\s*"((?:[^"\\]|\\.)*)"/g)) out.push({ page, reason: m[1].replace(/\\(.)/g, '$1') });
+    if (f.endsWith('.html')) { const m = t.match(/<meta\s+name=["']agl:custom["']\s+content=["']([^"']*)/i); if (m) out.push({ page, reason: m[1] }); } }
+  return out;
+}
+
+module.exports = { check, statusOf, customReasons };

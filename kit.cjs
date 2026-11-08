@@ -60,5 +60,8 @@ addEventListener('message',e=>{const m=e.data;if(e.source!==parent||!m||m.agl!==
 const waits={};let seq=0;addEventListener('message',e=>{const m=e.data;if(e.source!==parent||!m||m.agl!==1||m.type!=='got')return;if(waits[m.id]){waits[m.id](m.data);delete waits[m.id];}});
 window.AGL={ask,go:p=>post({type:'go',page:String(p)}),open:(agent,folder,page)=>post({type:'go',agent,folder,page:page||'STATUS'}),get:(what,arg)=>new Promise(r=>{const id=++seq;waits[id]=r;post({type:'get',id,what,arg});})};})();`;
 // Insert the kit at the top of <head>, so the page's own styles win.
-function withKit(html){const kit='<meta charset="utf-8"><style>'+KIT_CSS+'</style><script>'+KIT_JS+'</script>';const text=String(html||'');const m=text.match(/<head[^>]*>/i);return m?text.slice(0,m.index+m[0].length)+kit+text.slice(m.index+m[0].length):kit+text;}
-module.exports={KIT_CSS,KIT_JS,withKit};
+// Shared libraries a page asks for by name in <meta name="agl:libs" content="chart">; only these names load.
+const LIBS={chart:'lib-chart.js'};
+function libText(name){if(!Object.hasOwn(LIBS,name))return'';try{return require('node:fs').readFileSync(require('node:path').join(__dirname,'openui','dist',LIBS[name]),'utf8');}catch{return'';}}
+function withKit(html){const wanted=(String(html||'').match(/<meta\s+name=["']agl:libs["']\s+content=["']([^"']*)/i)||[])[1]||'';const libs=wanted.split(',').map(x=>libText(x.trim())).filter(Boolean).map(t=>'<script>'+t.replace(/<\/script/gi,'<\\/script')+'</script>').join('');const kit='<meta charset="utf-8"><style>'+KIT_CSS+'</style><script>'+KIT_JS+'</script>'+libs;const text=String(html||'');const m=text.match(/<head[^>]*>/i);return m?text.slice(0,m.index+m[0].length)+kit+text.slice(m.index+m[0].length):kit+text;}
+module.exports={KIT_CSS,KIT_JS,withKit,libText};

@@ -104,7 +104,8 @@ what the page **says** is fixed:
 8. **Delivered means proven:** each item has evidence (a commit, a test count, a URL, a
    screenshot). Untested work says "written, not run". Never "should work".
 9. **Workspace:** everything you run (servers, stacks, ports, preview links), each with its health
-   and since when. Stop what you no longer need.
+   and since when. Containers labelled `agl.session=<agent>/<name>` appear by themselves, read live; list the rest
+   with `Running(...)`. Stop what you no longer need.
 10. **History:** append-only, newest first, one line each: `TOOK` (from whom), `DELIVERED`
     (evidence), `DROPPED` (why).
 11. **Short at the top:** the first screen answers "what is happening, and what do you need from
@@ -170,9 +171,15 @@ next to the real work.
 ## Custom pages
 
 When the components can't show what you need, any page, the status page included, may be your own HTML with
-JavaScript, or an OpenUI page with your own block. It still runs sealed off (no network, no outside scripts, no
-approving by itself) and keeps its index card and the status rules. Add `<meta name="agl:custom" content="why">` (or
-a `Callout("idle", "Custom: why")`), so the reason reaches the next plugin version. Migration leaves custom pages alone.
+JavaScript, or an OpenUI page with your own block: `Custom(html, "why", height, ["chart"])` runs your HTML and
+scripts in its own sandbox, and `"chart"` gives it Chart.js as `window.Chart`. A full HTML page adds
+`<meta name="agl:custom" content="why">`, and can ask for libraries with `<meta name="agl:libs" content="chart">`.
+Everything still runs sealed off (no network, no outside scripts, no approving by itself) and keeps its index card
+and the status rules. The reason you give shows on the portal's Feature requests page, for the next plugin version.
+Migration leaves custom pages alone.
+
+In an HTML page, or a script you add, the kit gives you `AGL.ask`, `AGL.go`, `AGL.open`, and read-only
+`AGL.get('sessions')`, `AGL.get('session', name)`, `AGL.get('health')`.
 
 ## Hearing answers
 
