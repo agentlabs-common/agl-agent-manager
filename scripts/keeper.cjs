@@ -37,10 +37,13 @@ function check(sessionRoot, now = Date.now()) {
     if (t - now > 10 * 60000) add('future-time', `"updated" (${st.updated}) is in the future: take times from the clock.`);
     else if (Math.abs(t - st.at) / 60000 > GUESS_MIN) add('guessed-time', `"updated" (${st.updated}) is far from when the file was written: take times from the clock.`);
   }
-  if (st.state === 'needs-you' && st.open === 0) add('needs-without-question', 'State is needs-you but no question is open.');
+  let reviews = []; try { reviews = (JSON.parse(read(path.join(agl, 'reviews.json')) || '{}').items) || []; } catch {}
+  // Questions the user set aside don't count, in either direction.
+  const setAside = new Set(reviews.filter((r) => r.kind === 'ignore').map((r) => (String(r.text || '').match(/^\s*(Q\d+)/i) || [])[1]).filter(Boolean).map((x) => x.toUpperCase()));
+  if (st.format === 'openui' && setAside.size) { const text = read(path.join(agl, 'STATUS.openui')) || ''; const ids = (text.match(/^\s*root\s*=\s*Status\((?:\s*"(?:[^"\\]|\\.)*"\s*,){3}\s*\[([^\]]*)\]/m) || [, ''])[1].split(',').map((x) => x.trim()).filter(Boolean); const ignored = ids.filter((id) => { const m = text.match(new RegExp('^\\s*' + id + '\\s*=\\s*Question\\(\\s*"([^"]*)"', 'm')); return m && setAside.has(m[1].toUpperCase()); }).length; if (ignored) { st.open -= ignored; st.setAside = ignored; } }
+  if (st.state === 'needs-you' && st.open === 0 && !st.setAside) add('needs-without-question', 'State is needs-you but no question is open.');
   if (st.open > 0 && st.state !== 'needs-you') add('question-hidden', `${st.open} open question${st.open > 1 ? 's' : ''} while the state is ${st.state}: set needs-you so they show.`);
   if (st.open > 3) add('too-many-questions', `${st.open} open questions; keep at most 3.`);
-  let reviews = []; try { reviews = (JSON.parse(read(path.join(agl, 'reviews.json')) || '{}').items) || []; } catch {}
   const waiting = reviews.filter((r) => r.status === 'submitted' && (now - Date.parse(r.submittedAt)) / 60000 > ANSWER_MIN);
   if (waiting.length) add('answers-waiting', `${waiting.length} answer${waiting.length > 1 ? 's' : ''} from the user not handled yet (oldest ${Math.round((now - Math.min(...waiting.map((r) => Date.parse(r.submittedAt)))) / 60000)} min).`);
   const pages = (() => { try { return fs.readdirSync(path.join(agl, 'pages')); } catch { return []; } })();
