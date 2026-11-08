@@ -213,6 +213,11 @@
         "title": "Open Status Page",
         "icon": "$(pulse)",
         "category": "AGL Agent Manager"
+      },
+      {
+        "command": "claudeFolderAgents.about",
+        "title": "Version 0.7.17",
+        "category": "AGL Agent Manager"
       }
     ],
     "views": {
@@ -292,6 +297,11 @@
           "command": "claudeFolderAgents.trustClaudeWorkspace",
           "when": "view == claudeFolderAgents.sessions || view == claudeFolderAgents.workspaces",
           "group": "workspace@1"
+        },
+        {
+          "command": "claudeFolderAgents.about",
+          "when": "view == claudeFolderAgents.sessions || view == claudeFolderAgents.workspaces",
+          "group": "zabout@1"
         }
       ],
       "explorer/context": [
