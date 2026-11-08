@@ -101,6 +101,11 @@ what the page **says** is fixed:
    options, your pick, and what happens if nobody answers. Ask it in your `<voice>` summary too.
    When the user answers, on a page, by voice or in chat, move it to answered with the answer and
    the time in the same turn, then carry on.
+   **Every question ends with a set-aside option**, lettered last: `Option("Z", "Set aside, ask me later")`.
+   If the user chooses it (an approval like `Q7: Z`) or says to ignore or skip the question: remove it from
+   the open questions, add a history line `Entry("<time>", "DROPPED", "Set aside Q7: <the question>")`, stop
+   asking it (on the page, in chat and in `<voice>`), carry on with your pick or without it, and never bring
+   it back unless the user raises it. With no other open question, the state is no longer `needs-you`.
 8. **Delivered means proven:** each item has evidence (a commit, a test count, a URL, a
    screenshot). Untested work says "written, not run". Never "should work".
 9. **Workspace:** everything you run (servers, stacks, ports, preview links), each with its health
