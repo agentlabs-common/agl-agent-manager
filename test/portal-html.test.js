@@ -178,3 +178,25 @@ test('a container row carries its canonical address from the agl.host label', ()
   assert.equal(parseContainer('c2\trunning\tUp 1 hour\t\t').address, '', 'no label: no address');
   assert.equal(parseContainer('c3\trunning\tUp 1 hour (unhealthy)\t\tdb.dev.desk.localhost').address, 'db.dev.desk.localhost', 'a name without a published port'); assert.equal(parseContainer('c3\trunning\tUp 1 hour (unhealthy)\t\tx').health, 'degraded');
 });
+
+test('a link on a page opens in a new tab only for this machine\'s web addresses',async()=>{
+ const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-link-')));
+ try{
+  const root=path.join(base,'.sessions','claude','one');await fs.mkdir(path.join(root,'.agl'),{recursive:true});
+  await fs.writeFile(path.join(root,'.agl','STATUS.html'),'<!doctype html><html><head><title>S</title><meta name="agl:state" content="working"><meta name="agl:headline" content="h"><meta name="agl:updated" content="2026-11-08"></head><body><a href="http://git.localhost/desk">board</a></body></html>');
+  const portal=createPortal({listSessions:async()=>[{agent:'claude',folder:'one',name:'one',sessionRoot:root}]});
+  try{
+   const html=await (await fetch(await portal.url('s','claude','one'))).text();
+   const script=[...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).find(s=>s.includes('type==="link"'));assert.ok(script,'the portal handles link asks');
+   const frame={contentWindow:{postMessage(){}},style:{}};const el={onclick:null,close(){},showModal(){},focus(){},style:{},value:''};let onMessage;const opened=[];
+   const vm=require('node:vm');vm.runInNewContext(script,{document:{getElementById:id=>id==='agl-frame'?frame:el},addEventListener:(t,f)=>{if(t==='message')onMessage=f;},window:{open:(...a)=>opened.push(a)},fetch:async()=>({json:async()=>({})}),location:{},URL,URLSearchParams,setInterval:()=>0,clearInterval(){},setTimeout:()=>0});
+   const send=url=>onMessage({source:frame.contentWindow,data:{agl:1,type:'link',url}});
+   for(const u of ['http://git.localhost/desk','https://desk.localhost:10000/x','http://127.0.0.1:3000/','http://localhost/'])send(u);
+   for(const u of ['https://github.com/x','javascript:alert(1)','file:///etc/passwd','http://evil.localhost.example.com/','not a url','//git.localhost/'])send(u);
+   onMessage({source:{},data:{agl:1,type:'link',url:'http://git.localhost/other-frame'}});
+   assert.deepEqual(opened.map(a=>a[0]),['http://git.localhost/desk','https://desk.localhost:10000/x','http://127.0.0.1:3000/','http://localhost/']);
+   assert.ok(opened.every(a=>a[1]==='_blank'&&a[2]==='noopener'));
+   assert.match(withKit('<head></head>'),/type:'link'/,'the kit sends plain link clicks to the portal');
+  }finally{await portal.close();}
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});
