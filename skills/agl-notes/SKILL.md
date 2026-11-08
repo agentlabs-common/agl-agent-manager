@@ -225,7 +225,7 @@ questions remain open.
 
 The portal saves what the user does on your pages in `.agl/reviews.json` as `{"items":[...]}`.
 Approvals arrive as `"kind": "yes"` with text like `Q7: A — what was approved`; comments as
-`"kind": "comment"`; a question the user dismissed as `"kind": "ignore"` with text `Q7: set aside`. For a set-aside question: take it out of Needs you, list it under "Set aside" on your Questions page, stop asking it, and do not bring it back unless the user raises it. Read it at the start of each turn when the user says they answered, and when your
+`"kind": "comment"`. Read it at the start of each turn when the user says they answered, and when your
 status page asks something. Then:
 
 1. Act on every item with `"status": "submitted"`. Its `page` is `STATUS`, `FACTS` or a page slug.

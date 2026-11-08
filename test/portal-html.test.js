@@ -178,20 +178,3 @@ test('a container row carries its canonical address from the agl.host label', ()
   assert.equal(parseContainer('c2\trunning\tUp 1 hour\t\t').address, '', 'no label: no address');
   assert.equal(parseContainer('c3\trunning\tUp 1 hour (unhealthy)\t\tdb.dev.desk.localhost').address, 'db.dev.desk.localhost', 'a name without a published port'); assert.equal(parseContainer('c3\trunning\tUp 1 hour (unhealthy)\t\tx').health, 'degraded');
 });
-
-test('Ignore sets a question aside: it stops counting as asked, and the keeper leaves it alone', async () => {
-  const base = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'agl-ign-')));
-  try {
-    const root = path.join(base, 'a'); await fs.mkdir(path.join(root, '.agl', 'pages'), { recursive: true }); const now = new Date(); const p2 = (n) => String(n).padStart(2, '0'); const ts = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())} ${p2(now.getHours())}:${p2(now.getMinutes())}`;
-    await fs.writeFile(path.join(root, '.agl', 'STATUS.openui'), `root = Status("needs-you", "x", "${ts}", [q], [], [], [])\nq = Question("Q7", "W", "today", "Is it right?", [], "A", "x")\n`); await fs.writeFile(path.join(root, '.agl', 'pages', 'responsibility.openui'), 'root = Page("R", "s", "responsibility", "", "x", [])\n');
-    assert.equal((await notes.readNotes(root)).needsYou, true);
-    assert.equal((await notes.addReview(root, { page: 'STATUS', kind: 'ignore', text: 'Q7: set aside' })).kind, 'ignore');
-    const n = await notes.readNotes(root); assert.equal(n.questions.length, 0, 'not asked any more'); assert.equal(n.needsYou, false, 'no orange dot'); assert.equal(n.state, 'needs-you', 'the agent still updates its own state');
-    assert.deepEqual(require('../scripts/keeper.cjs').check(root).filter((c) => ['needs-without-question', 'question-hidden'].includes(c.code)), []);
-    const s = { agent: 'claude', folder: 'a', name: 'a', sessionRoot: root }; const portal = createPortal({ listSessions: async () => [s] });
-    try {
-      assert.match(await (await fetch(await portal.url('questions'))).text(), /Open questions \(0\)/);
-      const view = await (await fetch(await portal.url('s', 'claude', 'a'))).text(); const a = JSON.parse(view.match(/const A=(\[.*?\]);/)[1]); assert.deepEqual(a.map((x) => [x.question, x.kind]), [['Q7', 'ignore']]); assert.match(view, /m\.kind!=="ignore"/);
-    } finally { await portal.close(); }
-  } finally { await fs.rm(base, { recursive: true, force: true }); }
-});

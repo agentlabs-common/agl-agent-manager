@@ -53,7 +53,7 @@ const Question = defineComponent({ name: 'Question', description: 'A question to
     if (answer) {
       const waiting = answer.status === 'submitted';
       return <div className="agl-answered" data-agl-managed="" aria-live="polite">
-        <Chip state={answer.kind === 'ignore' ? 'idle' : waiting ? 'working' : 'done'}>{answer.kind === 'ignore' ? 'Set aside ' + answer.at : waiting ? 'Sent ' + answer.at + ', waiting for agent' : 'Answered ' + answer.at + ', agent has acted'}</Chip>
+        <Chip state={waiting ? 'working' : 'done'}>{waiting ? 'Sent ' + answer.at + ', waiting for agent' : 'Answered ' + answer.at + ', agent has acted'}</Chip>
         <span><b>{props.id}</b> {props.question} {answer.choice ? <b>· {answer.kind === 'comment' ? 'comment' : answer.choice}</b> : null}</span>
       </div>;
     }
@@ -72,7 +72,6 @@ const Question = defineComponent({ name: 'Question', description: 'A question to
       {readOnly ? <div className="agl-meta">Answer this on the agent's own page.</div> : <div className="agl-actions">
         <button className="agl-btn primary" data-agl-question={props.id} onClick={() => ask({ kind: 'approve', question: props.id, choice: chosen, label: pickText })}>{chosen === props.pick ? 'Approve' : 'Choose'} {chosen}</button>
         <button className="agl-btn" data-agl-question={props.id} onClick={() => ask({ kind: 'comment', question: props.id })}>Comment</button>
-        <button className="agl-btn" data-agl-question={props.id} onClick={() => ask({ kind: 'ignore', question: props.id, label: props.question })}>Ignore</button>
         <button className="agl-btn quiet agl-listen" aria-label={'Read ' + props.id + ' aloud'} onClick={() => ask({ kind: 'speak', label: `${props.id}. ${props.question} ${opts.map((o) => 'Option ' + o.letter + ': ' + o.text + '.').join(' ')} My pick: ${props.pick}.` })}><Speaker />Listen</button><StopButton />
       </div>}
     </div>;
