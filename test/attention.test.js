@@ -8,7 +8,7 @@ test('attention dots: permission prompts and needs-you status pages are urgent, 
 test('a running agent with portal contacts but no listener gets a quiet dot, after more urgent reasons',()=>{const a=new Attention();
  const r=a.update([{key:'q',status:'idle',notListening:true},{key:'p',status:'waiting',notListening:true},{key:'ok',status:'idle',notListening:false}]);
  assert.deepEqual(r.get('q'),{reason:'Not listening for portal messages',urgent:false,quiet:true});assert.equal(r.get('p').reason,'Waiting for your permission');assert.ok(!r.has('ok'));});
-test('a listening agent that Claude Code calls busy is not treated as working; its status page decides',()=>{const a=new Attention();
- a.update([{key:'l',status:'busy',state:'done',pageState:'idle'},{key:'w',status:'busy',state:'working',pageState:'working'}]);
- const r=a.update([{key:'l',status:'busy',state:'done',pageState:'idle'},{key:'w',status:'busy',state:'done',pageState:'done'}]);
+test('a listening agent that Claude Code calls busy is not treated as working; the state field decides',()=>{const a=new Attention();
+ a.update([{key:'l',status:'busy',state:'done'},{key:'w',status:'busy',state:'working'}]);
+ const r=a.update([{key:'l',status:'busy',state:'done'},{key:'w',status:'busy',state:'done'}]);
  assert.ok(!r.has('l'),'an idle listening agent never produces a new-reply dot');assert.equal(r.get('w').reason,'New reply','working to done on its page is a finished reply');});
