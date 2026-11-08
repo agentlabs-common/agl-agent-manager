@@ -243,6 +243,7 @@ const Pull = defineComponent({ name: 'Pull', description: "Leads: show one seat'
     const s = useRead('session', props.seat);
     if (s === undefined) return <p className="agl-meta">Reading {props.seat}…</p>;
     if (s === null) return <p className="agl-meta">{props.seat}: no such session.</p>;
+    if (s.denied) return <p className="agl-meta">{props.seat} is not a permitted contact: ask the user to allow it on the Contacts page.</p>;
     const head = <div className="agl-row"><Chip state={s.state} /><b><SeatLink s={s}>{s.name}</SeatLink></b>{props.note ? <span className="agl-muted">{props.note}</span> : null}</div>;
     const sub = props.item ? subtree(s.program, props.item) : null;
     return <div className="agl-pull">{head}

@@ -23,4 +23,6 @@ const TOKENS=`:root{color-scheme:light;
 // One rule per state: chip colours, rail and dot colour.
 const STATES=['needs-you','blocked','working','done','idle'];
 const STATE_CSS=STATES.map(s=>`.s-${s}{--rail:var(--agl-${s}-rail);--fg:var(--agl-${s});--bg:var(--agl-${s}-bg)}`).join('');
-module.exports={TOKENS,STATE_CSS,STATES};
+// An agent's identity: the same gradient every time from its name, different per agent, dark enough for light text.
+function gradientOf(name){let h=2166136261;for(const c of String(name))h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;const a=h%360,b=(a+40+((h>>>9)%80))%360,angle=90+((h>>>20)%91);return`linear-gradient(${angle}deg,hsl(${a} 55% 26%),hsl(${b} 60% 20%))`;}
+module.exports={TOKENS,STATE_CSS,STATES,gradientOf};

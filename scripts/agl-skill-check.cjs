@@ -14,7 +14,9 @@ function check(cwd, home = os.homedir()) {
   const acknowledged = (read(path.join(root, '.agl', '.skill-version')) || '').trim();
   // The status keeper's checks ride along: each agent hears its own page problems at its next prompt.
   let keeper = []; try { keeper = require(path.join(__dirname, 'keeper.cjs')).check(root).filter((c) => c.code !== 'old-format'); } catch {}
-  const kept = keeper.length ? ['AGL status keeper, your pages:', ...keeper.map((c) => '- ' + c.text)].join('\n') : '';
+  let kept = keeper.length ? ['AGL status keeper, your pages:', ...keeper.map((c) => '- ' + c.text)].join('\n') : '';
+  // The same findings repeat at most every 6 hours, so an agent that can't clear one isn't nagged at every prompt.
+  if (kept) { const seen = path.join(root, '.agl', '.keeper-seen'); const key = keeper.map((c) => c.code + ':' + c.text).join('|'); let last = {}; try { last = JSON.parse(read(seen) || '{}'); } catch {} if (last.key === key && Date.now() - (last.at || 0) < 6 * 3600e3) kept = ''; else try { fs.writeFileSync(seen, JSON.stringify({ key, at: Date.now() })); } catch {} }
   // Unread messages from other agents: the safety net when the background wait wasn't running.
   let inbox = ''; try { const comms = require(path.join(__dirname, 'comms.cjs')); const s = JSON.parse(read(path.join(root, '.agl-session.json'))); const unread = comms.unread(comms.defaultDir(home), s.agent + '/' + (s.name || s.folder)); if (unread.length) inbox = `AGL: ${unread.length} new message${unread.length > 1 ? 's' : ''} from ${[...new Set(unread.map((m) => m.from))].join(', ')}. Read with: node ${path.join(path.dirname(info.tools.migrate), 'agl-talk.cjs')} inbox --read`; } catch {}
   const extras = [inbox, kept].filter(Boolean).join('\n');

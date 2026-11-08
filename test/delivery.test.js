@@ -32,7 +32,7 @@ test('the hook tells an AGL session once its skill is behind, lists files to mig
   await deliver({ home, extensionPath: path.join(__dirname, '..'), version: '0.8.0' });
   const note = check(path.join(root, 'repo', 'src'), home);
   assert.match(note, /acknowledged none, installed 0\.8\.0/); assert.match(note, /\.agl\/STATUS\.md/); assert.match(note, /design-a\.md/); assert.doesNotMatch(note, /done-b\.md/);
-  await fs.writeFile(path.join(root, '.agl', '.skill-version'), '0.8.0\n'); const after = check(root, home);
+  await fs.writeFile(path.join(root, '.agl', '.skill-version'), '0.8.0\n'); assert.equal(check(root, home), '', 'same findings are not repeated at once'); await fs.rm(path.join(root, '.agl', '.keeper-seen')); const after = check(root, home);
   assert.doesNotMatch(after, /skill was updated/, 'acknowledged: no skill note'); assert.match(after, /status keeper[\s\S]*No Responsibility page/, 'keeper reminders still come');
   assert.equal(check(home, home), '', 'not an AGL session: silent');
   assert.equal(newer('0.10.0', '0.9.9'), true); assert.equal(newer('0.8.0', '0.8.0'), false);

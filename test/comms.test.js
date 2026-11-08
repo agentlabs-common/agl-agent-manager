@@ -81,3 +81,20 @@ test('the waker wakes a stopped agent with unread messages, and never one on hol
     assert.deepEqual(waker.permissionFlags('sid-1', path.join(dir, 'home')), ['--dangerously-skip-permissions'], 'keeps its own mode');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); } })();
 });
+
+test('a page reads only itself and its allowed contacts; each agent has its own gradient', async () => {
+  const { gradientOf } = require('../theme.cjs'); assert.equal(gradientOf('hrms-dev'), gradientOf('hrms-dev')); assert.notEqual(gradientOf('hrms-dev'), gradientOf('hrms-dev-1'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-read-')); const { createPortal } = require('../portal.cjs');
+  try {
+    const mk = (name) => { const r = path.join(dir, name); fs.mkdirSync(path.join(r, '.agl'), { recursive: true }); fs.writeFileSync(path.join(r, '.agl', 'STATUS.openui'), `root = Status("idle", "${name}", "2026-11-08 15:00", [], [], [], [])\n`); return { agent: 'claude', folder: name, name, sessionRoot: r }; };
+    const store = path.join(dir, 'store'); const portal = createPortal({ commsDir: store, listSessions: async () => [mk('hrms-lead'), mk('hrms-dev')] });
+    try {
+      const get = async (w, q) => (await fetch(await portal.url('api', w) + q)).json();
+      assert.deepEqual((await get('sessions', '?me=hrms-lead')).map((s) => s.name), ['hrms-lead']);
+      assert.equal((await get('session', '?me=hrms-lead&name=hrms-dev')).denied, true);
+      comms.request(store, LEAD, DEV, 'seat'); comms.decide(store, LEAD, DEV, 'allowed');
+      assert.equal((await get('sessions', '?me=hrms-lead')).length, 2); assert.match((await get('session', '?me=hrms-lead&name=hrms-dev')).program, /hrms-dev/);
+      const page = await (await fetch(await portal.url('s', 'claude', 'hrms-dev'))).text(); assert.ok(page.includes('header{background:' + gradientOf('hrms-dev')), 'gradient on the page');
+    } finally { await portal.close(); }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
