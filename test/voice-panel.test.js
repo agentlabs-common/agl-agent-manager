@@ -46,3 +46,7 @@ test('spoken commands from Gemini stop reading, repeat the reply, interrupt the 
  await panel.liveControl('stop_reading',client);assert.ok(calls.some(c=>Array.isArray(c)&&c[0]==='stop'));
  await panel.liveControl('interrupt_agent',client);assert.ok(calls.some(c=>c.input&&c.input[0]==='\x03'));
  panel.livePartial='half a thought';await panel.liveControl('cancel_dictation',client);assert.equal(panel.livePartial,'');await panel.stopLive();});
+test('cancel dictation stops recording and sends nothing',async()=>{const{VoicePanel}=load(class{},{workspace:{getConfiguration:()=>({get:(key,fallback)=>fallback})}});const{panel,calls}=setup(VoicePanel);panel.terminal.exitStatus=undefined;panel.backend.voice=async(...args)=>{calls.push(args);return args[0]==='finish'?'should not send':'';};
+ await panel.handle({type:'dictate'});await panel.handle({type:'cancelDictation'});assert.ok(calls.some(c=>Array.isArray(c)&&c[0]==='cancel'));assert.ok(!calls.some(c=>Array.isArray(c)&&c[0]==='finish'));assert.ok(!calls.some(c=>c.input));assert.equal(calls.filter(c=>c.type==='dictation').at(-1).state,'idle');
+ await panel.handle({type:'cancelDictation'});assert.equal(calls.filter(c=>Array.isArray(c)&&c[0]==='cancel').length,1,'cancel when not dictating does nothing');
+ await panel.handle({type:'dictate'});assert.ok(calls.filter(c=>Array.isArray(c)&&c[0]==='record').length===2,'can dictate again after cancel');await panel.handle({type:'cancelDictation'});});

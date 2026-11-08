@@ -31,3 +31,11 @@ test('Notes render Markdown sent as HTML by the extension',()=>{const elements=n
  const el=id=>{if(!elements.has(id))elements.set(id,make('div'));return elements.get(id);};
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../media/voice.js'),'utf8'),{acquireVsCodeApi:()=>({postMessage(){}}),document:{getElementById:el,createElement:make,querySelectorAll:()=>[]},window:{addEventListener:(type,fn)=>{receive=fn;}},Date});
  receive({data:{type:'voices',items:[],views:[{text:'## Hi',html:'<h2>Hi</h2>'}]}});const body=el('views').children[0].children[1];assert.equal(body.innerHTML,'<h2>Hi</h2>');});
+test('dictation cancel button shows only while recording; click and Esc cancel',()=>{const elements=new Map(),messages=[],listeners={};
+ const make=()=>({children:[],hidden:false,dataset:{},addEventListener(type,fn){this[type]=fn;},append(...nodes){this.children.push(...nodes);},replaceChildren(){this.children=[];},querySelector(){return null;},classList:{toggle(){}},setAttribute(name,value){this.attributes??={};this.attributes[name]=value;}});
+ const el=id=>{if(!elements.has(id))elements.set(id,make());return elements.get(id);};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../media/voice.js'),'utf8'),{acquireVsCodeApi:()=>({postMessage:m=>messages.push(m)}),document:{getElementById:el,createElement:make,querySelectorAll:()=>[]},window:{addEventListener:(type,fn)=>{listeners[type]=fn;}},Date});
+ const receive=data=>listeners.message({data});el('dictate-cancel').hidden=true;
+ receive({type:'dictation',state:'listening',text:'hi'});assert.equal(el('dictate-cancel').hidden,false);el('dictate-cancel').click();assert.equal(messages.at(-1).type,'cancelDictation');
+ let prevented=false;listeners.keydown({key:'Escape',preventDefault(){prevented=true;}});assert.equal(messages.at(-1).type,'cancelDictation');assert.ok(prevented);
+ receive({type:'dictation',state:'idle'});assert.equal(el('dictate-cancel').hidden,true);const count=messages.length;listeners.keydown({key:'Escape',preventDefault(){}});assert.equal(messages.length,count,'Esc does nothing when not dictating');});
