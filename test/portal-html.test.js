@@ -113,8 +113,20 @@ test('sidebar groups pages under their work item; archived work moves to Archive
   try{
    const view=await (await fetch(await portal.url('s','claude','s'))).text();const side=view.match(/<aside class="side"[\s\S]*?<\/aside>/)[0];
    assert.ok(side.indexOf('Responsibility')<side.indexOf('Facts'),'responsibility pinned near the top');
-   assert.match(side,/Agent portal<\/a><a class="sub" href="[^"]*\?p=design-x">Design X/);assert.doesNotMatch(side,/Old notes|Old thing<\/a><a/);assert.match(side,/Archive \(1\)/);
+   assert.match(side,/<details class="work working"><summary>[\s\S]*?Agent portal[\s\S]*?<\/summary><a class="sub" href="[^"]*&w=Agent%20portal">Overview<\/a><a class="sub" href="[^"]*\?p=design-x">Design X<\/a><\/details>/,'work folds, with its pages inside');assert.doesNotMatch(side,/Old notes|Old thing/);assert.match(side,/Archive \(1\)/);
    const arch=await (await fetch(await portal.url('s','claude','s')+'?p=ARCHIVE')).text();assert.match(arch,/Old thing[\s\S]*Old notes/);
   }finally{await portal.close();}
  }finally{await fs.rm(base,{recursive:true,force:true});}
+});
+
+test('migrate turns a Markdown page into an OpenUI page that parses cleanly',async()=>{
+ const{migrate}=require('../scripts/agl-migrate.cjs');
+ const md='# Design: "X"\nsummary: the plan\nupdated: 2026-11-08\nwork: Agent portal\n\nIntro with **bold**.\n\n## Part one\n\n- a\n- b\n  more b\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n### Sub\n\n```\ncode here\n```\n\n> note\n\n<svg viewBox="0 0 10 10">\n<rect/>\n</svg>\n';
+ const program=migrate(md,'design-x');
+ assert.match(program,/^root = Page\("Design: \\"X\\"", "the plan", "design", "Agent portal", "2026-11-08", \[t\d+, s\d+\]\)/);
+ const{defineComponent,createLibrary,createParser}=require('../openui/node_modules/@openuidev/react-lang');const{z}=require('../openui/node_modules/zod');
+ const any=n=>defineComponent({name:n,description:n,props:z.object({}).passthrough(),component:()=>null});
+ const names=['Page','Section','Text','Bullets','Table','Code','Callout','Figure'];const lib=createLibrary({root:'Page',components:names.map(any)});
+ const r=createParser(lib.toJSONSchema(),lib.root).parse(program);assert.deepEqual(r.meta.unresolved||[],[]);assert.equal(r.root.typeName||r.root.type||'Page',r.root.typeName||r.root.type||'Page');
+ for(const n of ['Bullets(["a", "b more b"])','Table(["A", "B"], [["1", "2"]])','Code("code here")','Callout("idle", "note")','Figure("<svg viewBox=\\"0 0 10 10\\">\\n<rect/>\\n</svg>", "")',', 3)'])assert.ok(program.includes(n),n);
 });

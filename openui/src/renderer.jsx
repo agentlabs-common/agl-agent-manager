@@ -22,6 +22,8 @@ function useAnswer(id) {
 }
 
 const Chip = ({ state, children }) => <span className={'agl-chip ' + state}>{children || LABEL[state] || state}</span>;
+const StopIcon = () => <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>;
+const StopButton = () => <button className="agl-btn quiet agl-stop" aria-label="Stop audio" onClick={() => ask({ kind: 'stop' })}><StopIcon />Stop audio</button>;
 const Speaker = () => <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5 6 9H3v6h3l5 4z" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M18.5 5.5a9 9 0 0 1 0 13" /></svg>;
 
 // Inline SVG from the agent; the page is sandboxed with no network, so markup can't reach anything.
@@ -67,7 +69,7 @@ const Question = defineComponent({ name: 'Question', description: 'A question to
       <div className="agl-actions">
         <button className="agl-btn primary" data-agl-question={props.id} onClick={() => ask({ kind: 'approve', question: props.id, choice: chosen, label: pickText })}>{chosen === props.pick ? 'Approve' : 'Choose'} {chosen}</button>
         <button className="agl-btn" data-agl-question={props.id} onClick={() => ask({ kind: 'comment', question: props.id })}>Comment</button>
-        <button className="agl-btn quiet agl-listen" aria-label={'Read ' + props.id + ' aloud'} onClick={() => ask({ kind: 'speak', label: `${props.id}. ${props.question} ${opts.map((o) => 'Option ' + o.letter + ': ' + o.text + '.').join(' ')} My pick: ${props.pick}.` })}><Speaker />Listen</button>
+        <button className="agl-btn quiet agl-listen" aria-label={'Read ' + props.id + ' aloud'} onClick={() => ask({ kind: 'speak', label: `${props.id}. ${props.question} ${opts.map((o) => 'Option ' + o.letter + ': ' + o.text + '.').join(' ')} My pick: ${props.pick}.` })}><Speaker />Listen</button><StopButton />
       </div>
     </div>;
   } });
@@ -154,7 +156,7 @@ const Status = defineComponent({ name: 'Status', description: "An agent's status
     return <div className="agl-page">
       <header className={'agl-card agl-rail s-' + props.state}>
         <div className="agl-row"><Chip state={props.state} /><span className="agl-muted">Updated {props.updated}</span>
-          <button className="agl-btn quiet agl-listen" style={{ marginLeft: 'auto' }} aria-label="Read the headline and open questions aloud" onClick={() => ask({ kind: 'speak', label: props.headline + '. ' + (needs.length ? needs.length + ' question' + (needs.length > 1 ? 's' : '') + ' for you.' : 'Nothing needs you.') })}><Speaker />Listen</button></div>
+          <button className="agl-btn quiet agl-listen" style={{ marginLeft: 'auto' }} aria-label="Read the headline and open questions aloud" onClick={() => ask({ kind: 'speak', label: props.headline + '. ' + (needs.length ? needs.length + ' question' + (needs.length > 1 ? 's' : '') + ' for you.' : 'Nothing needs you.') })}><Speaker />Listen</button><StopButton /></div>
         <h1 style={{ marginTop: 8 }}>{props.headline}</h1>
         {loud.length ? <p style={{ color: 'var(--agl-needs-you)', fontWeight: 600, marginTop: 8 }}>{loud.length} server{loud.length > 1 ? 's' : ''} {loud.map((r) => r.health).join(', ')}: {loud.map((r) => r.what).join(', ')}</p> : null}
         {!needs.length ? <p className="agl-meta" style={{ color: 'var(--agl-done)', marginTop: 8 }}>Nothing needs you.</p> : null}
@@ -166,7 +168,55 @@ const Status = defineComponent({ name: 'Status', description: "An agent's status
     </div>;
   } });
 
-export const library = createLibrary({ root: 'Status', components: [Status, WorkItem, Milestone, Delivery, Question, Option, Running, Entry, Figure] });
+// ---- Document pages: proposals, designs, guides, questions, responsibility ----
+// Inline marks in Text: **bold**, `code`, [label](target). A target naming another page of this session
+// (slug, slug.md, pages/slug.html) asks the portal to open it; the sandbox can't navigate by itself.
+function inline(text) {
+  const out = []; const re = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|(?<![\w*])\*([^*\n]+)\*(?![\w*])/g; let last = 0, m, k = 0;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    if (m[1]) out.push(<b key={k++}>{m[1]}</b>);
+    else if (m[2]) out.push(<code key={k++}>{m[2]}</code>);
+    else if (m[5]) out.push(<em key={k++}>{m[5]}</em>);
+    else if (m[3]) { const slug = (m[4].match(/^(?:\.\.?\/)*(?:\.agl\/)?(?:pages\/)?([a-z0-9][a-z0-9-]*|STATUS|FACTS)(?:\.(?:md|html|openui))?$/) || [])[1];
+      out.push(slug ? <a key={k++} href={'#' + slug} onClick={(e) => { e.preventDefault(); window.AGL && window.AGL.go && window.AGL.go(slug); }}>{m[3]}</a> : <span key={k++} title={m[4]}>{m[3]}</span>); }
+    last = re.lastIndex;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+const Text = defineComponent({ name: 'Text', description: 'Prose; blank lines separate paragraphs; **bold**, `code` and [label](other-page) inside',
+  props: z.object({ text: z.string() }),
+  component: ({ props }) => <>{String(props.text).split(/\n\s*\n/).map((para, i) => <p key={i}>{inline(para.replace(/\s*\n\s*/g, ' '))}</p>)}</> });
+const Bullets = defineComponent({ name: 'Bullets', description: 'A list; ordered=true numbers it',
+  props: z.object({ items: z.array(z.string()), ordered: z.boolean().optional() }),
+  component: ({ props }) => React.createElement(props.ordered ? 'ol' : 'ul', { className: 'agl-list' }, (props.items || []).map((t, i) => <li key={i}>{inline(t)}</li>)) });
+const Table = defineComponent({ name: 'Table', description: 'A table: column names, then rows of cells',
+  props: z.object({ columns: z.array(z.string()), rows: z.array(z.array(z.string())) }),
+  component: ({ props }) => <div className="agl-scroll"><table className="agl-table"><thead><tr>{props.columns.map((c, i) => <th key={i}>{inline(c)}</th>)}</tr></thead>
+    <tbody>{(props.rows || []).map((r, i) => <tr key={i}>{r.map((c, j) => <td key={j}>{inline(c)}</td>)}</tr>)}</tbody></table></div> });
+const Code = defineComponent({ name: 'Code', description: 'Preformatted code or commands',
+  props: z.object({ text: z.string() }),
+  component: ({ props }) => <pre className="agl-code"><code>{props.text}</code></pre> });
+const Callout = defineComponent({ name: 'Callout', description: 'A highlighted note; state colours it (needs-you for warnings)',
+  props: z.object({ state: z.enum(STATES), text: z.string() }),
+  component: ({ props }) => <div className={'agl-callout s-' + props.state}>{String(props.text).split(/\n\s*\n/).map((para, i) => <p key={i}>{inline(para)}</p>)}</div> });
+const Section = defineComponent({ name: 'Section', description: 'A headed part of a page; level 3 for a sub-heading',
+  props: z.object({ heading: z.string(), blocks: nodes, level: z.number().optional() }),
+  component: ({ props, renderNode }) => props.level === 3
+    ? <div className="agl-sub"><h3>{inline(props.heading)}</h3>{renderNode(props.blocks)}</div>
+    : <section className="agl-card"><h2>{inline(props.heading)}</h2>{renderNode(props.blocks)}</section> });
+const Page = defineComponent({ name: 'Page', description: 'A document page: title, one-line summary, kind, its work item, updated, then blocks',
+  props: z.object({ title: z.string(), summary: z.string(), kind: z.string().describe('proposal, design, guide, review, questions, responsibility'), work: z.string(), updated: z.string(), blocks: nodes }),
+  component: ({ props, renderNode }) => <div className="agl-page">
+    <header className="agl-card"><div className="agl-row"><span className="agl-chip idle">{props.kind}</span><span className="agl-muted">{props.work ? props.work + ' · ' : ''}Updated {props.updated}</span></div>
+      <h1 style={{ marginTop: 8 }}>{props.title}</h1><p className="agl-muted" style={{ marginTop: 4 }}>{props.summary}</p></header>
+    {renderNode(props.blocks)}
+  </div> });
+
+const ALL = [Status, Page, Section, Text, Bullets, Table, Code, Callout, WorkItem, Milestone, Delivery, Question, Option, Running, Entry, Figure];
+export const library = createLibrary({ root: 'Status', components: ALL });
+export const pageLibrary = createLibrary({ root: 'Page', components: ALL });
 
 function Errors({ errors }) {
   if (!errors.length) return null;
@@ -174,7 +224,8 @@ function Errors({ errors }) {
 }
 function App({ program }) {
   const [errors, setErrors] = React.useState([]);
-  return <><Errors errors={errors} /><Renderer response={program} library={library} isStreaming={false} onError={setErrors} /></>;
+  const lib = /^\s*root\s*=\s*Page\(/m.test(program) ? pageLibrary : library;
+  return <><Errors errors={errors} /><Renderer response={program} library={lib} isStreaming={false} onError={setErrors} /></>;
 }
 if (typeof document !== 'undefined') {
   const start = () => { const el = document.getElementById('openui-program'); const root = document.getElementById('openui-root'); if (el && root) createRoot(root).render(<App program={el.value || el.textContent} />); };
