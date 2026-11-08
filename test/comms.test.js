@@ -114,11 +114,11 @@ test('the hook lists unread messages at the next prompt', async () => {
   } finally { fs.rmSync(home, { recursive: true, force: true }); }
 });
 
-test('waker: finished sessions count as stopped, a resume continues the newest conversation, failures back off', async () => {
+test('waker: only sessions with no status count as stopped, a resume continues the newest conversation, failures back off', async () => {
   const waker = require('../scripts/waker.cjs'); const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-wake2-'));
   try {
-    assert.equal(waker.isRunningEntry({ kind: 'background', state: 'done', status: 'idle' }), false, 'finished background session');
-    for (const a of [{ kind: 'interactive', status: 'idle' }, { kind: 'background', state: 'blocked', status: 'idle' }, { kind: 'background', state: 'working', status: 'busy' }, { kind: 'background', state: 'done', status: 'busy' }]) assert.equal(waker.isRunningEntry(a), true, JSON.stringify(a));
+    for (const a of [{ kind: 'background', state: 'done', status: null }, { kind: 'background', state: 'blocked' }]) assert.equal(waker.isRunningEntry(a), false, 'stopped: ' + JSON.stringify(a));
+    for (const a of [{ kind: 'interactive', status: 'idle' }, { kind: 'background', state: 'done', status: 'idle' }, { kind: 'background', state: 'blocked', status: 'idle' }, { kind: 'background', state: 'working', status: 'busy' }]) assert.equal(waker.isRunningEntry(a), true, 'running, even when done and idle: ' + JSON.stringify(a));
     const root = path.join(dir, 'ws', '.sessions', 'hrms-dev'); fs.mkdirSync(path.join(root, '.agl'), { recursive: true }); fs.writeFileSync(path.join(root, '.agl-session.json'), JSON.stringify({ agent: 'claude', name: 'hrms-dev', conversations: [{ provider: 'claude', sessionId: 'original' }] }));
     const home = path.join(dir, 'home'); const projects = path.join(home, '.claude', 'projects', root.replace(/[^A-Za-z0-9-]/g, '-')); fs.mkdirSync(projects, { recursive: true });
     assert.equal(waker.latestSessionId(root, home), 'original', 'no transcript yet: the recorded id');
@@ -169,5 +169,19 @@ test('Conversations lists each agent talked with, newest first with unread count
       assert.ok(main.indexOf(OTHER) < main.indexOf(LEAD), 'newest first'); assert.match(main, /2 unread/); assert.match(main, /1 unread/); assert.doesNotMatch(main, /class="thread"/, 'the list shows no thread');
       const one = await (await fetch(base + '&w=' + encodeURIComponent(LEAD))).text(); assert.match(one, /With claude\/hrms-lead/); assert.match(one, /older &lt;b&gt;/); assert.doesNotMatch(one, /newest/, 'only that pair'); assert.match(one, /All conversations/);
     } finally { await portal.close(); }
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+test('waker resumes the seat itself: its job without flags (name and mode kept), never a copy; a job-less conversation gets the seat name', () => {
+  const waker = require('../scripts/waker.cjs'); const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-wake3-'));
+  try {
+    const root = path.join(dir, 'ws', '.sessions', 'claude', 'hrms-tester'); fs.mkdirSync(root, { recursive: true }); fs.writeFileSync(path.join(root, '.agl-session.json'), JSON.stringify({ agent: 'claude', name: 'hrms-tester' }));
+    const home = path.join(dir, 'home'); const jobs = path.join(home, '.claude', 'jobs');
+    fs.mkdirSync(path.join(jobs, 'old'), { recursive: true }); fs.writeFileSync(path.join(jobs, 'old', 'state.json'), JSON.stringify({ cwd: root, sessionId: 'old-seat', respawnFlags: ['--name', 'hrms-tester'] }));
+    fs.mkdirSync(path.join(jobs, 'seat'), { recursive: true }); fs.writeFileSync(path.join(jobs, 'seat', 'state.json'), JSON.stringify({ cwd: root, sessionId: 'seat-1', respawnFlags: ['--name', 'hrms-tester', '--dangerously-skip-permissions'] }));
+    fs.mkdirSync(path.join(jobs, 'other'), { recursive: true }); fs.writeFileSync(path.join(jobs, 'other', 'state.json'), JSON.stringify({ cwd: root + '-x', sessionId: 'not-me' }));
+    const t = Date.now() / 1000; fs.utimesSync(path.join(jobs, 'old', 'state.json'), t - 100, t - 100);
+    assert.equal(waker.seatJob(root, home).sessionId, 'seat-1', 'newest job in this exact folder');
+    assert.deepEqual(waker.resumeArgs({ root, sessionId: 'seat-1', prompt: 'p', home }), ['--bg', '--resume', 'seat-1', 'p'], 'no flags: saved options keep name and mode');
+    assert.deepEqual(waker.resumeArgs({ root, sessionId: 'convo-only', prompt: 'p', home }).slice(-2), ['--name', 'hrms-tester'], 'a conversation without a job gets the seat name');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
