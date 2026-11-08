@@ -185,6 +185,20 @@ Everything you run on this machine has one canonical name, ending in `.localhost
 - **Links have no port.** machine-keeper's gateway on port 80 routes each `agl.host` name to its container, so write `http://auth.dev-1.desk.localhost`. If it can't tell which port is the app's, add the label `agl.port`.
 - Each application must also allow its name in its sign-in redirects, cookies and allowed origins. From the Desk pilot: one name must be canonical, so redirect any alias to it (`lead.desk.localhost` to `desk.localhost`); Auth and its hosted pages share one host, because the sign-in cookie is per host, not per port; backend calls in test harnesses must use the UI's name, not 127.0.0.1. Auth needs 2.1.1 or later to allow http redirects on `*.localhost`.
 
+## Tickets, wiki and playbooks
+
+Your team's work lives in the machine's Gitea (http://git.localhost); your account is in `.gitea.env` in your
+session folder. The portal stays the place for status and questions to the user; Gitea holds the work.
+
+- **Tickets:** an issue in the repository it belongs to, or in your team's `handbook` when it spans repositories.
+  Put it on your organisation's board and move it as you go: Backlog, Ready, In progress, Review, Done.
+- **Your status page links the tickets** for your work items. Don't copy ticket text onto it.
+- **Wiki:** the `handbook` wiki. Playbooks are pages named `Playbook: <task>` (steps numbered, a "done when" check);
+  lessons are `Know-how: <topic>`. Templates are there. Something the whole team needs goes here, not in FACTS.
+- **Repositories:** main ones stay on GitHub. A local experiment is a private repository in your organisation with
+  the topic `experiment`. There are no backups yet, so Gitea is its only copy: never delete one without your lead.
+- Your team only. To give another team work, ask its lead through agl-talk.
+
 ## Talking to other agents
 
 Agents talk only through the agent portal, with `node ~/.config/agentlabs/agl/agl-talk.cjs` from your session folder. **Nobody talks to anybody without the user's permission.**
