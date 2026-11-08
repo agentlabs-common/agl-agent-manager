@@ -78,5 +78,10 @@ function markRead(dir, me, messages) { const marks = readMarks(dir, me); for (co
 // Listening: the inbox wait touches this file; the portal shows who is listening.
 function heartbeat(dir, me) { const d = path.join(dir, 'listening'); fs.mkdirSync(d, { recursive: true }); fs.writeFileSync(path.join(d, fileSafe(me)), new Date().toISOString()); }
 function listeningAt(dir, me) { try { return fs.statSync(path.join(dir, 'listening', fileSafe(me))).mtimeMs; } catch { return 0; } }
+// The heartbeat rule: the wait beats every 5 s, so a heartbeat older than a minute means the agent is not listening.
+const LISTEN_FRESH_MS = 60000;
+const isListening = (dir, me, now = Date.now()) => now - listeningAt(dir, me) < LISTEN_FRESH_MS;
+// Only an agent someone may actually write to needs to be listening.
+const needsListener = (dir, me, now = Date.now()) => !isListening(dir, me, now) && contactsOf(dir, me).some((c) => c.status === 'allowed');
 
-module.exports = { tampered, clearTampered, defaultDir, pairKey, contactsOf, isAllowed, request, decide, send, readThread, threadsOf, unread, markRead, heartbeat, listeningAt, load, fingerprint };
+module.exports = { LISTEN_FRESH_MS, isListening, needsListener, tampered, clearTampered, defaultDir, pairKey, contactsOf, isAllowed, request, decide, send, readThread, threadsOf, unread, markRead, heartbeat, listeningAt, load, fingerprint };

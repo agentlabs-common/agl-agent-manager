@@ -142,3 +142,16 @@ test('a contact list changed outside the portal stops messages until the user cl
   comms.request(dir, 'claude/a', 'claude/b', 'x'); assert.equal(comms.tampered(dir), true, 'a later save does not hide the change');
   comms.clearTampered(dir); assert.equal(comms.tampered(dir), false); assert.equal(comms.send(dir, DEV, LEAD, 'ok').text, 'ok');
 }));
+
+test('an agent with allowed contacts and no fresh heartbeat is told to listen, and marked', async () => {
+  const { check } = require('../scripts/agl-skill-check.cjs'); const { createPortal } = require('../portal.cjs'); const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-listen-'));
+  try {
+    const root = path.join(home, 'hrms-dev'); fs.mkdirSync(path.join(root, '.agl', 'pages'), { recursive: true }); fs.writeFileSync(path.join(root, '.agl-session.json'), JSON.stringify({ agent: 'claude', name: 'hrms-dev' })); fs.writeFileSync(path.join(root, '.agl', 'STATUS.openui'), 'root = Status("idle", "x", "2026-11-08 15:00", [], [], [], [])\n'); fs.writeFileSync(path.join(root, '.agl', '.skill-version'), '0.10.0');
+    const tools = path.join(home, '.config', 'agentlabs', 'agl'); fs.mkdirSync(tools, { recursive: true }); fs.writeFileSync(path.join(tools, 'agent-portal.json'), JSON.stringify({ skills: { 'agl-notes': '0.10.0' }, tools: { migrate: path.join(tools, 'agl-migrate.cjs') } }));
+    const store = comms.defaultDir(home); assert.equal(comms.needsListener(store, DEV), false, 'no contacts: nothing to listen for'); assert.doesNotMatch(check(root, home), /not listening/);
+    comms.request(store, LEAD, DEV, 'seat'); assert.equal(comms.needsListener(store, DEV), false, 'a request alone is not enough'); comms.decide(store, LEAD, DEV, 'allowed');
+    assert.equal(comms.needsListener(store, DEV), true); assert.match(check(root, home), /not listening for messages\. Start this with your background option: node .*agl-talk\.cjs inbox --wait --read/);
+    const portal = createPortal({ commsDir: store, listSessions: async () => [{ agent: 'claude', folder: 'hrms-dev', name: 'hrms-dev', sessionRoot: root }] });
+    try { assert.match(await (await fetch(await portal.url())).text(), />not listening</); comms.heartbeat(store, DEV); assert.doesNotMatch(await (await fetch(await portal.url())).text(), />not listening</); assert.doesNotMatch(check(root, home), /not listening/); assert.equal(comms.needsListener(store, DEV, Date.now() + comms.LISTEN_FRESH_MS + 1000), true, 'a stale heartbeat counts as not listening'); } finally { await portal.close(); }
+  } finally { fs.rmSync(home, { recursive: true, force: true }); }
+});
