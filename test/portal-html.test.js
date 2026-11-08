@@ -54,3 +54,14 @@ test('STATUS.html replaces STATUS.md: its index card feeds the list and it is se
   }finally{await portal.close();}
  }finally{await fs.rm(base,{recursive:true,force:true});}
 });
+
+test('a page can ask to read a question aloud; the portal speaks it, and an empty ask stops it',async()=>{
+ const said=[];const portal=createPortal({listSessions:async()=>[],speak:text=>{said.push(text);return text?'speaking':'stopped';}});
+ try{
+  const url=await portal.url('speak');const send=text=>fetch(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({text})});
+  assert.equal(await (await send('Q7: is the guide right?')).text(),'speaking');assert.equal(await (await send('')).text(),'stopped');
+  assert.deepEqual(said,['Q7: is the guide right?','']);
+  assert.equal((await fetch(new URL(url).origin+'/wrong/speak',{method:'POST'})).status,404,'needs the token');
+  assert.match(withKit('<head></head>'),/Read this question aloud/,'kit adds a Listen button to each question');
+ }finally{await portal.close();}
+});
