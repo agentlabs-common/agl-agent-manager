@@ -119,7 +119,9 @@ test('sidebar groups pages under their work item; archived work moves to Archive
  }finally{await fs.rm(base,{recursive:true,force:true});}
 });
 
-test('migrate turns a Markdown page into an OpenUI page that parses cleanly',async()=>{
+// Needs OpenUI's build packages (npm ci in openui/); skipped on a fresh checkout without them.
+const haveOpenui=require('node:fs').existsSync(path.join(__dirname,'..','openui','node_modules','@openuidev','react-lang'));
+test('migrate turns a Markdown page into an OpenUI page that parses cleanly',{skip:!haveOpenui&&'run npm ci in openui/ first'},async()=>{
  const{migrate}=require('../scripts/agl-migrate.cjs');
  const md='# Design: "X"\nsummary: the plan\nupdated: 2026-11-08\nwork: Agent portal\n\nIntro with **bold**.\n\n## Part one\n\n- a\n- b\n  more b\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n### Sub\n\n```\ncode here\n```\n\n> note\n\n<svg viewBox="0 0 10 10">\n<rect/>\n</svg>\n';
  const program=migrate(md,'design-x');
