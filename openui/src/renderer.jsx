@@ -111,6 +111,7 @@ const WorkItem = defineComponent({ name: 'WorkItem', description: 'One piece of 
     const ms = propsOf(props.milestones);
     const [all, setAll] = React.useState(false);
     const delivered = props.delivered || [];
+    if (props.archived) return null;
     if (props.state === 'idle' || props.state === 'done') return <section className={'agl-card agl-rail s-' + props.state} data-agl-work={props.name} tabIndex={-1}>
       <div className="agl-row"><b>{props.name}</b><Chip state={props.state}>{props.state === 'idle' ? 'Parked' : 'Done'}</Chip><span className="agl-muted">{props.goal}</span></div></section>;
     return <section className={'agl-card agl-rail s-' + props.state} data-agl-work={props.name} tabIndex={-1}>
