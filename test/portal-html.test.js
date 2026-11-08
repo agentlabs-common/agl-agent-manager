@@ -152,3 +152,21 @@ test('session list groups by team, and the read API returns cards and a seat\'s 
   }finally{await portal.close();}
  }finally{await fs.rm(base,{recursive:true,force:true});}
 });
+
+test('open questions from every session are listed; a page changed after approval is flagged',async()=>{
+ const base=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'agl-q-')));
+ try{
+  const root=path.join(base,'a');await fs.mkdir(path.join(root,'.agl','pages'),{recursive:true});
+  await fs.writeFile(path.join(root,'.agl','STATUS.openui'),'root = Status("needs-you", "x", "2026-11-08 13:00", [q], [], [], [])\nq = Question("Q7", "Agent portal", "today", "Is it right?", [], "A", "x")\n');
+  const page=path.join(root,'.agl','pages','design-a.openui');await fs.writeFile(page,'root = Page("A", "s", "design", "W", "x", [])\n');
+  const s={agent:'claude',folder:'a',name:'a',sessionRoot:root};const portal=createPortal({listSessions:async()=>[s]});
+  try{
+   const q=await (await fetch(await portal.url('questions'))).text();assert.match(q,/Open questions \(1\)/);assert.match(q,/Is it right\?/);assert.match(q,/Agent portal/);
+   await notes.addReview(root,{page:'STATUS',kind:'yes',text:'Q7: A — yes'});assert.match(await (await fetch(await portal.url('questions'))).text(),/Sent, waiting for agent/);
+   const item=await notes.addReview(root,{page:'design-a',kind:'yes',text:'Approved'});assert.ok(item.hash,'approval keeps a fingerprint');
+   const view=async()=>(await fetch(await portal.url('s','claude','a')+'?p=design-a')).text();assert.doesNotMatch(await view(),/changed after you approved/);
+   await fs.writeFile(page,'root = Page("A changed", "s", "design", "W", "x", [])\n');assert.match(await view(),/changed after you approved/);
+   assert.ok(require('../scripts/keeper.cjs').check(root).some(c=>c.code==='approved-changed'));
+  }finally{await portal.close();}
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});

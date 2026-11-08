@@ -1,6 +1,6 @@
 // Status keeper checks: what an agent's pages get wrong against the status guide. Pure reads, no writes.
 // Used by the portal (marks for the user) and by the update hook (a reminder at the agent's next prompt).
-const fs = require('node:fs'); const path = require('node:path');
+const fs = require('node:fs'); const path = require('node:path'); const crypto = require('node:crypto');
 const read = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return undefined; } };
 const mtime = (f) => { try { return fs.statSync(f).mtimeMs; } catch { return undefined; } };
 const STATES = ['needs-you', 'blocked', 'working', 'done', 'idle'];
@@ -44,6 +44,9 @@ function check(sessionRoot, now = Date.now()) {
   const waiting = reviews.filter((r) => r.status === 'submitted' && (now - Date.parse(r.submittedAt)) / 60000 > ANSWER_MIN);
   if (waiting.length) add('answers-waiting', `${waiting.length} answer${waiting.length > 1 ? 's' : ''} from the user not handled yet (oldest ${Math.round((now - Math.min(...waiting.map((r) => Date.parse(r.submittedAt)))) / 60000)} min).`);
   const pages = (() => { try { return fs.readdirSync(path.join(agl, 'pages')); } catch { return []; } })();
+  // What the user approved does not move: the latest approval of each page must match the page as it stands.
+  const latest = {}; for (const r of reviews) if (r.kind === 'yes' && r.hash) latest[r.page] = r;
+  for (const [page, r] of Object.entries(latest)) { const ext = ['openui', 'html', 'md'].find((e) => pages.includes(page + '.' + e)); if (!ext) continue; const now_ = crypto.createHash('sha256').update(read(path.join(agl, 'pages', page + '.' + ext)) || '').digest('hex').slice(0, 16); if (now_ !== r.hash) add('approved-changed', `Page "${page}" changed after the user approved it: state what changed, as a new version, and ask again.`); }
   if (!pages.some((f) => /^responsibility\.(openui|html|md)$/.test(f))) add('no-responsibility', 'No Responsibility page: write .agl/pages/responsibility.openui, or ask the user what you are responsible for.');
   // A page's newest format wins: an .md left beside its .openui or .html is a leftover, not a page of its own.
   const has = (slug, ext) => pages.includes(slug + '.' + ext);
