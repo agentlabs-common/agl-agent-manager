@@ -171,7 +171,7 @@ const Status = defineComponent({ name: 'Status', description: "An agent's status
       {(props.team || []).length ? <section className="agl-card"><h2>From the team</h2>{renderNode(props.team)}</section> : null}
       {renderNode(props.work)}
       {running.length || live.length ? <section className="agl-card"><h2>Workspace</h2><div className="agl-scroll"><table className="agl-table"><thead><tr><th>Health</th><th>What</th><th>Where</th><th>Since</th></tr></thead><tbody>
-        {live.map((r) => <tr key={r.name} className={'s-' + HEALTH[r.health]}><td><span className="agl-row" style={{ gap: 8 }}><span className="agl-dot" />{r.health}</span></td><td>{r.name} <span className="agl-muted">live</span></td><td className="agl-mono">{r.ports || '—'}</td><td className="agl-muted">{r.status}</td></tr>)}
+        {live.map((r) => <tr key={r.name} className={'s-' + HEALTH[r.health]}><td><span className="agl-row" style={{ gap: 8 }}><span className="agl-dot" />{r.health}</span></td><td>{r.name} <span className="agl-muted">live</span></td><td className="agl-mono">{r.address || r.ports || '—'}</td><td className="agl-muted">{r.status}</td></tr>)}
         {renderNode(props.running)}</tbody></table></div></section> : null}
       {(props.history || []).length ? <History entries={props.history} renderNode={renderNode} /> : null}
     </div>;

@@ -170,3 +170,11 @@ test('open questions from every session are listed; a page changed after approva
   }finally{await portal.close();}
  }finally{await fs.rm(base,{recursive:true,force:true});}
 });
+
+test('a container row carries its canonical address from the agl.host label', () => {
+  const { parseContainer } = require('../portal.cjs');
+  const row = parseContainer('c1\trunning\tUp 2 hours (healthy)\t127.0.0.1:10110->8080/tcp\tauth.dev-1.desk.localhost');
+  assert.equal(row.address, 'auth.dev-1.desk.localhost:10110'); assert.equal(row.health, 'running');
+  assert.equal(parseContainer('c2\trunning\tUp 1 hour\t\t').address, '', 'no label: no address');
+  assert.equal(parseContainer('c3\trunning\tUp 1 hour (unhealthy)\t\tdb.dev.desk.localhost').address, 'db.dev.desk.localhost', 'a name without a published port'); assert.equal(parseContainer('c3\trunning\tUp 1 hour (unhealthy)\t\tx').health, 'degraded');
+});

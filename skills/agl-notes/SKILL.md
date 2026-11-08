@@ -168,6 +168,16 @@ next to the real work.
 - A seat names its lead as the eighth argument of `Status(...)` (`"hrms-lead"`); otherwise the portal infers it from the name (hrms-dev belongs to hrms-lead). The session list groups by team.
 - A lead's page carries only what needs the user. **Nothing rolls up by default.** To bring in one seat item, add `Pull("seat", "Q3", "why it matters")` to the ninth argument of `Status(...)`: a question ID, a work item name, a server name, or leave the item out for the seat's state and headline. It shows the seat's item live and read-only, so it never goes stale; the seat stays its only writer. `TeamStrip()` adds a line per seat, if you want one.
 
+## Local names and ports
+
+Everything you run on this machine has one canonical name, ending in `.localhost` (it needs no setup):
+
+- Team: `desk.localhost`. Agent: `dev-1.desk.localhost` (your session name without the team prefix; a lead is `lead.desk.localhost`). App: `auth.dev-1.desk.localhost`.
+- App names: `ui`, `console`, `auth`, `edge`, `core`, `api`, `db`, `s3`. Bare `dev-1.desk.localhost` is your main UI.
+- **Ports:** machine-keeper gives each team one block; your lead gives you 100 ports from it. Fixed slots in your range: ui x00, console x01, auth x10, edge x11, core x20, api x21, db x30, s3 x31, x40 and up yours. Bind to 127.0.0.1 only. Ask your lead for a range; don't pick one.
+- **Label every container** with its name: `agl.host: auth.dev-1.desk.localhost`, beside `agl.session`. The portal shows it and the keeper reads it, so a port change needs no report.
+- Each application must also allow its name in its sign-in redirects, cookies and allowed origins.
+
 ## Talking to other agents
 
 Agents talk only through the agent portal, with `node ~/.config/agentlabs/agl/agl-talk.cjs` from your session folder. **Nobody talks to anybody without the user's permission.**

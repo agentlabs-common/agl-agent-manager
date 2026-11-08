@@ -34,6 +34,8 @@ function page(title,body,nonce,script='',css=''){return'<!doctype html><html lan
 // Empty text stops everything: this portal's speech, and the voice hooks' queue via hush.sh when present.
 const HUSH=path.join(require('node:os').homedir(),'.claude','hooks','hush.sh');
 function liveSpeaker(){let child;return text=>{const was=child;if(was){was.kill();child=undefined;}if(!text){require('node:fs').access(HUSH,require('node:fs').constants.X_OK,e=>{if(!e)spawn(HUSH,[],{stdio:'ignore',detached:true}).on('error',()=>{}).unref();});return'stopped';}child=spawn('python3',[path.join(__dirname,'tts.py'),text],{stdio:'ignore'});const mine=child;mine.on('exit',()=>{if(child===mine)child=undefined;});mine.on('error',()=>{if(child===mine)child=undefined;});return'speaking';};}
+// One line of `docker ps`: its health, and its canonical address from the agl.host label plus its published port.
+function parseContainer(line){const[name,state,status,ports,host]=line.split('\t');const port=(String(ports||'').match(/(?:127\.0\.0\.1|0\.0\.0\.0|\[::\]):(\d+)->/)||[])[1]||'';return{name,status,ports:ports||'',host:host||'',address:host?host+(port?':'+port:''):'',health:state==='running'?(/unhealthy/.test(status)?'degraded':'running'):state==='restarting'?'degraded':state==='dead'?'down':state==='exited'?(/Exited \(0\)/.test(status)?'stopped':'down'):'stopped'};}
 function createPortal({listSessions,version='',commsDir=comms.defaultDir(),wake=false,host='127.0.0.1',port=0,token=crypto.randomBytes(18).toString('base64url'),speak=liveSpeaker()}){
  let server,base,wakeTimer;
  const newer=(a,b)=>{const x=String(a).split('.').map(Number),y=String(b||'0').split('.').map(Number);for(let i=0;i<3;i++)if((x[i]||0)!==(y[i]||0))return(x[i]||0)>(y[i]||0);return false;};
@@ -41,7 +43,7 @@ function createPortal({listSessions,version='',commsDir=comms.defaultDir(),wake=
  const behind=n=>n.state!=='none'&&(n.statusFormat==='md'||!!(version&&n.skillVersion&&newer(version,n.skillVersion)));
  // Live container health for a session, from its agl.session label. Cached briefly; no Docker means no rows.
  const healthCache=new Map();
- function health(id){const hit=healthCache.get(id);if(hit&&Date.now()-hit.at<15000)return hit.rows;return new Promise(resolve=>{execFile('docker',['ps','-a','--filter','label=agl.session='+id,'--format','{{.Names}}\t{{.State}}\t{{.Status}}\t{{.Ports}}'],{timeout:3000},(error,out)=>{const rows=error?[]:String(out).split('\n').filter(Boolean).map(l=>{const[name,state,status,ports]=l.split('\t');return{name,status,ports:ports||'',health:state==='running'?(/unhealthy/.test(status)?'degraded':'running'):state==='restarting'?'degraded':state==='dead'?'down':state==='exited'?(/Exited \(0\)/.test(status)?'stopped':'down'):'stopped'};});healthCache.set(id,{at:Date.now(),rows});resolve(rows);});});}
+ function health(id){const hit=healthCache.get(id);if(hit&&Date.now()-hit.at<15000)return hit.rows;return new Promise(resolve=>{execFile('docker',['ps','-a','--filter','label=agl.session='+id,'--format','{{.Names}}\t{{.State}}\t{{.Status}}\t{{.Ports}}\t{{.Label "agl.host"}}'],{timeout:3000},(error,out)=>{const rows=error?[]:String(out).split('\n').filter(Boolean).map(parseContainer);healthCache.set(id,{at:Date.now(),rows});resolve(rows);});});}
  const tamperWarning=()=>comms.tampered(commsDir)?'<p class="error"><b>The contact list was changed outside the portal.</b> Messages are stopped until you check it. <form class="inline" method="post" action="'+link('contact-clear')+'"><button>I have checked it</button></form></p>':'';
  const link=(...parts)=>'/'+token+'/'+parts.map(encodeURIComponent).join('/');
  async function find(agent,folder){const row=(await listSessions()).find(s=>s.agent===agent&&s.folder===folder);if(!row)throw Object.assign(new Error('Session not found.'),{status:404});return row;}
@@ -134,4 +136,4 @@ function createPortal({listSessions,version='',commsDir=comms.defaultDir(),wake=
  async function start(){if(base)return base;server=http.createServer((req,res)=>{handle(req,res).catch(error=>{if(!res.headersSent)res.writeHead(error.status||500,{'content-type':'text/plain'});res.end(error.message);});});await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve);});if(wake){wakeTimer=setInterval(()=>{listSessions().then(sessions=>waker.tick({sessions,dir:commsDir})).catch(()=>{});},20000);wakeTimer.unref();}base='http://'+host+':'+server.address().port;return base;}
  return{start,url:async(...parts)=>(await start())+link(...parts),close:()=>new Promise(resolve=>{if(wakeTimer)clearInterval(wakeTimer);server?server.close(()=>resolve()):resolve();})};
 }
-module.exports={createPortal};
+module.exports={createPortal,parseContainer};
