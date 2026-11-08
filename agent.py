@@ -180,21 +180,49 @@ def process_alive(session):
         stat=open('/proc/%s/stat'%int(session['pid'])).read().rsplit(')',1)[1].split()
         return stat[0]!='Z' and stat[19]==str(session['procStart'])
     except (OSError,KeyError,ValueError,TypeError):return False
+# A background session keeps its own saved options; resuming it with new flags starts a copy (new id, no name).
+# So the mode goes into its saved options and it is resumed without flags: same session, id and name.
+def saved_job(sid,home=None):
+    jobs=os.path.join(home or os.path.expanduser('~'),'.claude','jobs');found=[]
+    for job in (os.listdir(jobs) if os.path.isdir(jobs) else []):
+        path=os.path.join(jobs,job,'state.json')
+        try:
+            with open(path) as stream:state=json.load(stream)
+        except (OSError,ValueError):continue
+        if isinstance(state,dict) and state.get('sessionId')==sid:found.append((os.path.getmtime(path),path,state))
+    return max(found,key=lambda item:item[0])[1:] if found else (None,None)
+def save_yolo(path,state,name=''):
+    flags=list(state.get('respawnFlags') or []);out=[];skip=False
+    for index,flag in enumerate(flags):
+        if skip:skip=False;continue
+        if flag=='--permission-mode':skip=True;continue
+        if flag.startswith('--permission-mode='):continue
+        out.append(flag)
+    if '--dangerously-skip-permissions' not in out:out.append('--dangerously-skip-permissions')
+    name=state.get('name') or name
+    if name and '--name' not in out:out+=['--name',name]
+    state['respawnFlags']=out;temp=path+'.agl-tmp'
+    with open(temp,'w') as stream:json.dump(state,stream)
+    os.replace(temp,path)
+    return out
 def restart_yolo(cwd,sid):
     session=next((row for row in listing(cwd) if row['sessionId']==sid),None)
     if not session:raise RuntimeError('This session is not in the current working directory. Refresh the list.')
     cli=os.environ.get('CLAUDE_AGENTS_CLI','claude')
-    if session.get('live'):
-        if session.get('kind')=='background':run([cli,'stop',session['id']],cwd)
-        else:
-            if not process_alive(session):raise RuntimeError('Cannot verify the running Claude process. Refresh before restarting.')
-            os.kill(int(session['pid']),signal.SIGTERM)
+    if session.get('live') and session.get('kind')=='background':
+        # `claude stop` returns once it has stopped; a finished background session still lists as live, so do not wait on the list.
+        run([cli,'stop',session['id']],cwd)
+    elif session.get('live'):
+        if not process_alive(session):raise RuntimeError('Cannot verify the running Claude process. Refresh before restarting.')
+        os.kill(int(session['pid']),signal.SIGTERM)
         for _ in range(80):
             remaining=next((row for row in listing(cwd) if row['sessionId']==sid and row.get('live')),None)
             if not remaining:break
             time.sleep(.1)
         else:raise RuntimeError('Claude has not stopped yet. Wait for it to exit before restarting; a duplicate session was prevented.')
-    run([cli,'--bg','--resume',sid,'--dangerously-skip-permissions'],cwd)
+    path,state=saved_job(sid)
+    if path:save_yolo(path,state,session.get('name') or '');run([cli,'--bg','--resume',sid],cwd)
+    else:run([cli,'--bg','--resume',sid,'--dangerously-skip-permissions'],cwd)
     return dict(session={**session,'kind':'background','live':True,'state':'running'},argv=[cli,'attach',sid])
 def main():
     action=sys.argv[1];cwd=sys.argv[2]
