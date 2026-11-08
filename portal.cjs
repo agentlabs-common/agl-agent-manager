@@ -10,8 +10,8 @@ function page(title,body,nonce,script=''){return'<!doctype html><html lang="en">
 
 // Read text aloud on this machine, generated live by Gemini (tts.py). Pressing again stops it.
 function liveSpeaker(){let child;return text=>{const was=child;if(was){was.kill();child=undefined;}if(!text)return'stopped';child=spawn('python3',[path.join(__dirname,'tts.py'),text],{stdio:'ignore'});const mine=child;mine.on('exit',()=>{if(child===mine)child=undefined;});mine.on('error',()=>{if(child===mine)child=undefined;});return'speaking';};}
-function createPortal({listSessions,host='127.0.0.1',speak=liveSpeaker()}){
- const token=crypto.randomBytes(18).toString('base64url');let server,base;
+function createPortal({listSessions,host='127.0.0.1',port=0,token=crypto.randomBytes(18).toString('base64url'),speak=liveSpeaker()}){
+ let server,base;
  const link=(...parts)=>'/'+token+'/'+parts.map(encodeURIComponent).join('/');
  async function find(agent,folder){const row=(await listSessions()).find(s=>s.agent===agent&&s.folder===folder);if(!row)throw Object.assign(new Error('Session not found.'),{status:404});return row;}
  async function home(nonce){const rows=await Promise.all((await listSessions()).map(async s=>({s,n:await notes.readNotes(s.sessionRoot).catch(e=>({state:'unknown',headline:'Cannot read notes: '+e.message,pages:[],reviews:[],open:0}))})));rows.sort((a,b)=>ORDER[a.n.state]-ORDER[b.n.state]||(b.n.modified||0)-(a.n.modified||0));
@@ -51,7 +51,7 @@ function createPortal({listSessions,host='127.0.0.1',speak=liveSpeaker()}){
    try{if(form.get('op')==='confirm')await notes.confirmReview(s.sessionRoot,form.get('id'));else await notes.addReview(s.sessionRoot,{page:current,kind:form.get('kind'),text:form.get('text')});}catch(error){const html=await session(nonce,parts[1],parts[2],current,error.message);res.writeHead(400,headers);return res.end(html);}
    res.writeHead(303,{location:link('s',parts[1],parts[2])+'?p='+encodeURIComponent(current)});return res.end();}
   res.writeHead(404,{'content-type':'text/plain'});res.end('Not found.');}
- async function start(){if(base)return base;server=http.createServer((req,res)=>{handle(req,res).catch(error=>{if(!res.headersSent)res.writeHead(error.status||500,{'content-type':'text/plain'});res.end(error.message);});});await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,host,resolve);});base='http://'+host+':'+server.address().port;return base;}
+ async function start(){if(base)return base;server=http.createServer((req,res)=>{handle(req,res).catch(error=>{if(!res.headersSent)res.writeHead(error.status||500,{'content-type':'text/plain'});res.end(error.message);});});await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve);});base='http://'+host+':'+server.address().port;return base;}
  return{start,url:async(...parts)=>(await start())+link(...parts),close:()=>new Promise(resolve=>server?server.close(()=>resolve()):resolve())};
 }
 module.exports={createPortal};
