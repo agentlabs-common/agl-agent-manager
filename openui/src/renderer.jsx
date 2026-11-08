@@ -7,6 +7,13 @@ import { defineComponent, createLibrary, Renderer } from '@openuidev/react-lang'
 import { z } from 'zod';
 
 const STATES = ['needs-you', 'blocked', 'working', 'done', 'idle'];
+// Answers the portal already holds (sent to the kit on load); a Question with one stops asking.
+function useAnswer(id) {
+  const read = () => (window.AGL && window.AGL.answers && window.AGL.answers[String(id || '').toUpperCase()]) || null;
+  const [answer, setAnswer] = React.useState(read);
+  React.useEffect(() => { const on = () => setAnswer(read()); addEventListener('agl-answers', on); on(); return () => removeEventListener('agl-answers', on); }, [id]);
+  return answer;
+}
 const ask = (o) => window.AGL && window.AGL.ask(o);
 const nodes = z.array(z.any());
 
@@ -19,7 +26,13 @@ const Question = defineComponent({ name: 'Question', description: 'A question to
     options: nodes.describe('Option list'), pick: z.string().describe('your pick, a letter'), ifSilent: z.string().describe('what happens if nobody answers') }),
   component: ({ props, renderNode }) => {
     const opts = (props.options || []).map((o) => o && o.props).filter(Boolean);
-    return <div className="agl-decision">
+    const answer = useAnswer(props.id);
+    if (answer) return <div className="agl-decision agl-answered" data-agl-managed="">
+      <span className={'agl-chip ' + (answer.status === 'submitted' ? 'blocked' : 'done')}>{answer.kind === 'comment' ? 'You commented' : answer.kind === 'no' ? 'You said no' : 'You chose ' + (answer.choice || 'yes')} at {answer.at}{answer.status === 'submitted' ? ' · waiting for the agent' : ' · the agent has acted'}</span>
+      <span className="agl-from">{props.id} · {props.work} · {props.asked}</span>
+      <span className="agl-q">{props.question}</span>
+    </div>;
+    return <div className="agl-decision" data-agl-managed="">
       <span className="agl-from">{props.id} · {props.work} · {props.asked}</span>
       <span className="agl-q">{props.question}</span>
       <span>{renderNode(props.options)}</span>
