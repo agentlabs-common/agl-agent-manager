@@ -210,8 +210,8 @@
       },
       {
         "command": "claudeFolderAgents.openStatusPage",
-        "title": "Open Status Page",
-        "icon": "$(pulse)",
+        "title": "Open Agent Portal",
+        "icon": "$(globe)",
         "category": "AGL Agent Manager"
       },
       {

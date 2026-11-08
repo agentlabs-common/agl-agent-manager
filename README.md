@@ -93,7 +93,7 @@ Source discovery follows [Codex skills](https://developers.openai.com/codex/skil
 
 Each session keeps its pages in `.agl/`: `STATUS.openui` (its status page), `FACTS.md`, `pages/*` (proposals, designs, guides, its Responsibility page) and `reviews.json` (your answers). Pages are written in [OpenUI Lang](https://github.com/thesysdev/openui) and drawn by the portal's own components; HTML and Markdown pages still work. The bundled **agl-notes** skill teaches agents the format and the status rules.
 
-- **Open Status Page** (pulse icon) opens the agent portal in your browser, on 127.0.0.1 only, with a random token in every URL. The home page lists every session in the workspace, needs-you first, with stale, review and **needs migration** marks.
+- The **Agent Portal** row at the top of AGL Agent Manager (or the globe icon) opens the agent portal in your browser, on 127.0.0.1 only, with a random token in every URL. The home page lists every session in the workspace, needs-you first, with stale, review and **needs migration** marks.
 - Each session page has a sidebar: Status, Responsibility, Questions and Facts, then one foldable entry per work item with its pages, and an Archive for finished work.
 - **Answering:** a question's buttons only ask. The portal shows its own box with the exact text, and only your click records it in `.agl/reviews.json`. Answered questions are marked at once; agents that wait in the background pick the answer up straight away.
 - **Listen** reads a question aloud, generated live with Gemini (`tts.py`); **Stop audio** beside it, or in the top bar, stops any speech, including the voice hooks' queue (`~/.claude/hooks/hush.sh` when present). Answering also stops it.
