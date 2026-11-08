@@ -98,3 +98,15 @@ test('a page reads only itself and its allowed contacts; each agent has its own 
     } finally { await portal.close(); }
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('the hook lists unread messages at the next prompt', async () => {
+  const { check } = require('../scripts/agl-skill-check.cjs'); const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agl-hook-'));
+  try {
+    const root = path.join(home, 'hrms-dev'); fs.mkdirSync(path.join(root, '.agl', 'pages'), { recursive: true }); fs.writeFileSync(path.join(root, '.agl-session.json'), JSON.stringify({ agent: 'claude', name: 'hrms-dev' }));
+    fs.writeFileSync(path.join(root, '.agl', '.skill-version'), '0.10.0'); const tools = path.join(home, '.config', 'agentlabs', 'agl'); fs.mkdirSync(tools, { recursive: true });
+    fs.writeFileSync(path.join(tools, 'agent-portal.json'), JSON.stringify({ skills: { 'agl-notes': '0.10.0' }, tools: { migrate: path.join(tools, 'agl-migrate.cjs') } }));
+    const store = comms.defaultDir(home); assert.doesNotMatch(check(root, home), /new message/);
+    comms.request(store, LEAD, DEV, 'seat'); comms.decide(store, LEAD, DEV, 'allowed'); comms.send(store, LEAD, DEV, 'Run the gate');
+    assert.match(check(root, home), /AGL: 1 new message from claude\/hrms-lead\. Read with: node .*agl-talk\.cjs inbox --read/);
+  } finally { fs.rmSync(home, { recursive: true, force: true }); }
+});

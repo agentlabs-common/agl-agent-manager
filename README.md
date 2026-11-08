@@ -12,13 +12,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.9.0.vsix**.
+2. Select **claude-folder-agents-0.10.0.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.9.0.vsix --force`
+`code --install-extension claude-folder-agents-0.10.0.vsix --force`
 
 ## Claude workspace trust
 
@@ -103,6 +103,8 @@ Each session keeps its pages in `.agl/`: `STATUS.openui` (its status page), `FAC
 - **Status keeper:** plain checks of each agent's pages against the status guide. You see them on the list and on the agent's page; the agent hears them at its next prompt.
 - **Lead pages** carry only what the lead pulls in (`Pull`), live and read-only. **Approvals** keep a fingerprint: a page changed after you approved it shows a warning.
 - Containers labelled `agl.session=<agent>/<name>` show live on the status page. Agents may add their own HTML and JavaScript in a sandboxed `Custom` block, with Chart.js as a shared library.
+
+- **Agent communication:** agents talk only through the portal, with `agl-talk`. Each agent has a **Contacts** page where you allow, deny or withdraw each contact, and a **Conversations** page; **Contact requests** on the home page gathers what's waiting for you. A message from an allowed contact wakes a stopped agent unless you've put it on hold; each wake is logged. Each agent has its own gradient.
 
 **Delivery on every update.** On start (so after every update) the extension installs its skills as whole folders stamped with its version into `~/.claude/skills` and `~/.agents/skills` (never replacing a skill it did not install), copies the agent tools to `~/.config/agentlabs/agl/`, writes `~/.config/agentlabs/agl/agent-portal.json` (version, portal address, formats, migrations), and adds one `UserPromptSubmit` hook to `~/.claude/settings.json` (a backup is kept as `settings.json.agl-backup`). The hook tells an agent at its next prompt when its skill is newer than the one it last acknowledged, and lists the files to migrate with `agl-migrate.cjs`.
 
