@@ -2,6 +2,10 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.15.1 (2026-11-09) — local test release
+
+The voice pane now uses the session name in its title, header, reply labels, live captions and composer controls for every provider. Copilot no longer falls back to Claude. Name changes refresh labels even when the reply text is unchanged. The sidebar uses GitHub's Copilot Octicon, with separate light/dark colors and its MIT attribution.
+
 ## 0.15.0 (2026-11-09) — local test release
 
 - Adds GitHub Copilot CLI as a local provider: native sessions and terminals, history/readout, teams, portal pages and native user skill switches.
