@@ -72,3 +72,9 @@ test('Kimi folder switches filter a launch catalog, keep resources and leave oth
  await assert.rejects(call('skills-agent-set',{kind:'skill',name:'probe',file:'/somewhere/else',on:false}),/cannot be switched/);
  }finally{await fs.rm(base,{recursive:true,force:true});}
 });
+
+test('Skills uses the actual attached provider backend after terminal attachment unwraps SessionBackend',async()=>{
+ const vm=require('node:vm'),module={exports:{}},calls=[];vm.runInNewContext(require('node:fs').readFileSync(path.join(__dirname,'../voice-panel.js'),'utf8'),{module,require:name=>name==='vscode'?{workspace:{isTrusted:true}}:name==='./live-client'?{LiveClient:class{}}:require(name),setInterval,clearInterval,setTimeout,Set});
+ for(const provider of ['codex','copilot']){const panel=Object.create(module.exports.VoicePanel.prototype);panel.session={provider,cwd:'/agent'};panel.backend={skills:async(action,values)=>{calls.push({provider,action,values});return{provider,groups:[]};}};panel.post=async()=>{};await panel.handle({type:'skills'});await panel.handle({type:'skillSet',kind:'skill',name:'probe',file:'/skill/SKILL.md',on:false});}
+ assert.equal(calls.length,4);assert.equal(calls[3].provider,'copilot');assert.equal(calls[1].values.on,false);
+});

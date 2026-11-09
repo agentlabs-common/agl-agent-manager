@@ -269,6 +269,16 @@
         "title": "Stop Agent",
         "category": "AGL Agent Manager",
         "icon": "$(debug-stop)"
+      },
+      {
+        "command": "claudeFolderAgents.newCopilot",
+        "title": "New Copilot Session",
+        "category": "AGL Agent Manager"
+      },
+      {
+        "command": "claudeFolderAgents.newCopilotYolo",
+        "title": "New Copilot Session (YOLO)",
+        "category": "AGL Agent Manager"
       }
     ],
     "views": {
@@ -547,7 +557,8 @@
             "enum": [
               "claude",
               "codex",
-              "kimi"
+              "kimi",
+              "copilot"
             ]
           },
           "uniqueItems": true,
@@ -555,7 +566,8 @@
           "default": [
             "claude",
             "codex",
-            "kimi"
+            "kimi",
+            "copilot"
           ],
           "description": "Agent providers to show for the selected working directory."
         },
@@ -583,6 +595,11 @@
           "type": "string",
           "default": "main",
           "description": "Base branch for canonical clones when creating workspace session worktrees. Uses origin/<branch> when origin exists."
+        },
+        "claudeFolderAgents.copilotPath": {
+          "type": "string",
+          "default": "copilot",
+          "description": "Path to GitHub Copilot CLI. Copilot sessions currently support local workspaces."
         }
       }
     }
@@ -603,6 +620,7 @@
   "dependencies": {
     "marked": "^15.0.12",
     "smol-toml": "^1.9.1",
+    "vscode-jsonrpc": "^10.0.0",
     "ws": "^8.22.1"
   }
 }

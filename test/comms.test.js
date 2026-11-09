@@ -185,3 +185,27 @@ test('waker resumes the seat itself: its job without flags (name and mode kept),
     assert.deepEqual(waker.resumeArgs({ root, sessionId: 'convo-only', prompt: 'p', home }).slice(-2), ['--name', 'hrms-tester'], 'a conversation without a job gets the seat name');
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('Copilot wake resumes the bound conversation, respects hold/running/withdrawal and marks only delivered messages read',async()=>{
+ const waker=require('../scripts/waker.cjs'),dir=fs.mkdtempSync(path.join(os.tmpdir(),'agl-copilot-wake-'));try{
+ const store=path.join(dir,'store'),root=path.join(dir,'seat'),lead='claude/wake-lead',seat='copilot/wake-seat';fs.mkdirSync(path.join(root,'.agl'),{recursive:true});const sid='12345678-1234-1234-1234-123456789abc';const sessions=[{agent:'copilot',name:'wake-seat',sessionRoot:root,conversations:[{provider:'copilot',sessionId:sid}]}];comms.request(store,lead,seat,'wake test');comms.decide(store,lead,seat,'allowed');comms.send(store,lead,seat,'Isolated message');
+ let started=0;const adapter={running:async()=>[],start:async values=>{started++;assert.equal(values.sessionId,sid);assert.equal(values.messages[0].text,'Isolated message');comms.send(store,lead,seat,'New message during processing',new Date(Date.now()+1000));values.onDelivered();return{ok:true,delivered:true};}};const run=(extra={})=>waker.tick({sessions,dir:store,providers:{copilot:adapter},...extra});
+ fs.writeFileSync(path.join(root,'.agl','.hold'),'held');assert.deepEqual(await run(),[]);fs.unlinkSync(path.join(root,'.agl','.hold'));
+ adapter.running=async()=>[root];assert.deepEqual(await run(),[]);adapter.running=async()=>[];
+ const result=await run();assert.equal(result[0].delivered,true);assert.equal(started,1);assert.deepEqual(comms.unread(store,seat).map(m=>m.text),['New message during processing']);
+ assert.deepEqual(await run(),[],'cooldown prevents another wake');comms.decide(store,lead,seat,'withdrawn');assert.deepEqual(await run({now:Date.now()+waker.COOLDOWN_MS*10}),[]);assert.equal(started,1);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('Concurrent portals cannot double-wake Copilot; thrown failures are logged and backed off',async()=>{
+ const waker=require('../scripts/waker.cjs'),dir=fs.mkdtempSync(path.join(os.tmpdir(),'agl-copilot-wake-race-'));try{
+ const store=path.join(dir,'store'),root=path.join(dir,'seat'),lead='claude/race-lead',seat='copilot/race-seat';fs.mkdirSync(root);comms.request(store,lead,seat,'race test');comms.decide(store,lead,seat,'allowed');comms.send(store,lead,seat,'Message');let release,entered;const gate=new Promise(r=>release=r),started=new Promise(r=>entered=r);let count=0;const sessions=[{agent:'copilot',name:'race-seat',sessionRoot:root,conversations:[{provider:'copilot',sessionId:'same-id'}]}];const providers={copilot:{running:async()=>[],start:async()=>{count++;entered();await gate;throw Error('Native login required');}}};
+ const run=()=>waker.tick({sessions,dir:store,providers});const first=run();await started;assert.deepEqual(await run(),[]);release();assert.equal((await first)[0].ok,false);assert.equal(count,1);assert.deepEqual(await run(),[]);assert.equal(waker.wakes(store,seat).length,1);assert.deepEqual(fs.readdirSync(path.join(store,'wake-locks')),[]);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+test('Copilot wake rechecks contact permissions after an asynchronous activity check and never invents a conversation',async()=>{
+ const waker=require('../scripts/waker.cjs'),dir=fs.mkdtempSync(path.join(os.tmpdir(),'agl-copilot-wake-permission-'));try{
+ const store=path.join(dir,'store'),root=path.join(dir,'seat'),lead='claude/check-lead',seat='copilot/check-seat';fs.mkdirSync(root);comms.request(store,lead,seat,'permission test');comms.decide(store,lead,seat,'allowed');comms.send(store,lead,seat,'Message');const sessions=[{agent:'copilot',name:'check-seat',sessionRoot:root,conversations:[{provider:'copilot',sessionId:'same-id'}]}];let count=0;const providers={copilot:{running:async()=>{comms.decide(store,lead,seat,'withdrawn');return[];},start:async()=>{count++;return{ok:true};}}};assert.deepEqual(await waker.tick({sessions,dir:store,providers}),[]);assert.equal(count,0);comms.decide(store,lead,seat,'allowed');sessions[0].conversations=[];providers.copilot.running=async()=>[];assert.deepEqual(await waker.tick({sessions,dir:store,providers}),[]);assert.equal(count,0);
+ }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
