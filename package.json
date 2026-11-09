@@ -3,7 +3,7 @@
   "displayName": "AGL Agent Manager",
   "description": "Folder-scoped Claude, Codex and Kimi sessions with native terminals, Gemini voice control and full-reply TTS.",
   "version": "0.14.11",
-  "publisher": "local-tools",
+  "publisher": "Agentlabs",
   "license": "MIT",
   "icon": "media/icon.png",
   "engines": {

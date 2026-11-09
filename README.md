@@ -8,6 +8,16 @@ A dot (●) marks a session that needs you: a permission prompt or an agent wait
 
 ## Install
 
+Install **AGL Agent Manager** (publisher Agentlabs) from the Visual Studio Marketplace, or download a VSIX from GitHub Releases as below.
+
+**What it changes outside VS Code.** On activation it installs and keeps current, in your home folder:
+- the `agl-notes` skill in `~/.claude/skills` and `~/.agents/skills` (a skill you wrote with the same name is never replaced);
+- the agent portal tools in `~/.config/agentlabs/agl` (`agl-talk`, the status keeper, the prompt hook script);
+- one UserPromptSubmit hook in `~/.claude/settings.json`, and in `~/.kimi-code/config.toml` when Kimi is installed (a backup is written next to each file first).
+Agents use these to keep status pages and to message each other. The extension itself sends data only for voice: to Google Gemini (speech and Live) and, for Dictate, to Deepgram, each with your own API key. The agent CLIs you run talk to their own providers.
+
+Moving from a VSIX installed before 0.14.12 (ID `local-tools.claude-folder-agents`): uninstall that copy. Settings and teams carry over; hidden sessions and each window's list filter start fresh.
+
 Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases/latest).
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
