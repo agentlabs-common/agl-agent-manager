@@ -2,6 +2,10 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.14.13 (2026-11-09)
+
+**Listed on the VS Code Marketplace as AGL Agent Manager** (ID `Agentlabs.agl-agent-manager`). The README opens with what the extension does and a quick start; this changelog is new; search keywords and categories are set. If Gemini Live lacks the `websockets` package, or no Gemini key is set, the error now says exactly what to do. Dictate is documented as optional, with what it needs.
+
 ## 0.14.12 (2026-11-09)
 
 **Published on the VS Code Marketplace as Agentlabs**. The extension ID becomes Agentlabs.claude-folder-agents; uninstall the old local-tools copy after installing this one. Settings and teams carry over; hidden sessions and each window's list filter start fresh. The README now says what the extension writes in your home folder and what leaves the machine.
