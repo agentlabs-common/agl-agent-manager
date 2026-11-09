@@ -602,6 +602,7 @@
   "homepage": "https://github.com/agentlabs-common/agl-agent-manager#readme",
   "dependencies": {
     "marked": "^15.0.12",
+    "smol-toml": "^1.9.1",
     "ws": "^8.22.1"
   }
 }

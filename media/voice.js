@@ -45,11 +45,11 @@ function renderNotes(message){const container=el('status');container.replaceChil
   if(message.pages?.length)container.append(node('p','skills-note','Pages: '+message.pages.join(' · ')));
 }
 function renderSkills(message){const container=el('skills');container.replaceChildren();if(message.unsupported){container.append(node('p','empty','Per-agent skill switches are available for Claude sessions only.'));return;}
-  const intro=node('p','skills-note',message.changed?'Saved. Restart this agent to apply the change.':'Switches apply to this agent only and are saved in its .claude/settings.local.json.');container.append(intro);
+  const intro=node('p','skills-note',(message.changed?'Saved. ':'')+(message.notice||'Switches apply to this agent folder only. Claude reloads local settings; restart to clear instructions already used in the conversation.'));container.append(intro);
   if(!message.groups?.length)container.append(node('p','empty','No skills found for this agent.'));
   for(const group of message.groups||[]){const section=node('article','voice-row skill-group');const meta=node('div','row-meta',group.label.toUpperCase());meta.title=group.folder||group.id||'';
     if(group.kind==='plugin'){section.append(toggle(group.label,group.on,'Plugin '+group.id,on=>send('skillSet',{kind:'plugin',name:group.id,on})));const names=node('p','skill-desc',group.skills.map(s=>s.name).join(', ')||'No skills in this plugin.');section.append(names);}
-    else{section.append(meta);for(const skill of group.skills){const row=toggle(skill.name,skill.on,'Skill '+skill.name,on=>send('skillSet',{kind:'skill',name:skill.name,on}));row.title=skill.file;section.append(row);if(skill.description)section.append(node('p','skill-desc',skill.description));}}
+    else{section.append(meta);for(const skill of group.skills){const row=toggle(skill.name,skill.on,'Skill '+skill.name,on=>send('skillSet',{kind:'skill',name:skill.name,file:skill.file,on}));row.title=skill.file;if(skill.readonly){row.children[0].disabled=true;row.title+=' · managed by the provider';}section.append(row);if(skill.description)section.append(node('p','skill-desc',skill.description));}}
     container.append(section);}
   applyCapabilities();
 }
