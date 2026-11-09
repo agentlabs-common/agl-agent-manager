@@ -1,14 +1,14 @@
 # AGL Agent Manager
 
-A standalone VS Code extension for native Claude Code and Codex sessions.
-It lists Claude and Codex agents only inside the current workspace’s .sessions folders, including their repository worktrees.
+A standalone VS Code extension for native Claude Code, Codex and Kimi Code sessions.
+It lists agents only inside the current workspace’s .sessions folders, including their repository worktrees.
 Agents started directly in the canonical workspace or elsewhere are excluded.
-Claude sessions use an orange icon. Codex sessions use a green terminal icon.
+Claude sessions use an orange icon, Codex sessions a green terminal icon, and Kimi sessions the Kimi icon.
 A dot (●) marks a session that needs you: a permission prompt or an agent waiting for your answer (warning colour), or a reply you have not looked at yet (blue). The count appears on the view. Opening the session clears its unread dot.
 
 ## Install
 
-Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-common/claude-folder-agents/releases/latest).
+Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases/latest).
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
@@ -28,7 +28,7 @@ Ordinary session subfolders inherit parent trust. Nested Git repositories and so
 
 ## Codex sessions
 
-Claude and Codex appear together in **AGL Agent Manager**, limited to managed .sessions folders and their descendants.
+Claude, Codex and Kimi appear together in **AGL Agent Manager**, limited to managed .sessions folders and their descendants.
 **Providers** in extension settings can show either provider alone. A missing provider does not hide sessions from the other one.
 
 Open a Codex row to launch `codex resume <thread-id>` with the shared Gemini voice pane. Repeated clicks reuse the terminal.
@@ -112,6 +112,14 @@ Each session keeps its pages in `.agl/`: `STATUS.openui` (its status page), `FAC
 
 The **Status** tab in the Voice pane shows the same status for that agent. Local workspaces only for now; SSH sessions are not shown. Notes in `.agl/` block **Remove Agent Folder…** until you move or delete them.
 
+## Teams and groups
+
+The list splits into your **teams** and **Ephemeral**. Each has three groups: **Working** (in a turn, waiting on a permission prompt, or with a question for you), **Idle** (running between turns; open one to go straight to its terminal) and **Stopped** (no running process; open one to start it again). Rows are sorted by name inside each group, so a refresh never reshuffles the list.
+
+Every conversation starts as Ephemeral: copies, one-off runs and new agents alike. Right-click one and choose **Add to Team…** to put it in a team you pick or a new one. Right-click a team to **Rename Team** or **Delete Team** (its agents go back to Ephemeral). A conversation is in one team at a time. Teams are saved per workspace in `.sessions/teams.json`, so every window and agent sees the same teams.
+
+Right-click a running agent for **Stop Agent**. It asks first, ends the current turn and process, and keeps the conversation to resume later.
+
 ## Closed and hidden sessions
 
 The default **All sessions** filter includes running sessions, saved Claude conversations, and closed or archived Codex conversations under existing .sessions workspace folders. The extension cannot recover history already removed by the agent.
@@ -120,7 +128,7 @@ Use the **Filter Sessions** funnel in the view title to choose **All**, **Runnin
 Right-click a session for **Hide Session**. This changes only this extension's view and keeps the conversation and any running task.
 Choose **Hidden sessions**, then right-click **Restore Hidden Session** to show it again.
 
-**Delete Closed Session…** permanently removes the selected conversation after confirmation. Running sessions must be closed first.
+**Delete Session…** permanently removes the selected conversation after confirmation. A running agent is stopped first.
 For Codex, native deletion also removes spawned child sessions. For Claude background agents, native deletion may remove its managed worktree; the confirmation explains this before deletion. Saved interactive Claude conversations delete their transcripts while keeping project files.
 Opening an archived Codex conversation restores that same thread before opening its terminal.
 

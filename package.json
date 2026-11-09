@@ -114,7 +114,7 @@
       },
       {
         "command": "claudeFolderAgents.deleteSession",
-        "title": "Delete Closed Session…",
+        "title": "Delete Session…",
         "category": "AGL Agent Manager",
         "icon": "$(trash)"
       },
@@ -573,12 +573,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/agentlabs-common/claude-folder-agents.git"
+    "url": "https://github.com/agentlabs-common/agl-agent-manager.git"
   },
   "bugs": {
-    "url": "https://github.com/agentlabs-common/claude-folder-agents/issues"
+    "url": "https://github.com/agentlabs-common/agl-agent-manager/issues"
   },
-  "homepage": "https://github.com/agentlabs-common/claude-folder-agents#readme",
+  "homepage": "https://github.com/agentlabs-common/agl-agent-manager#readme",
   "dependencies": {
     "marked": "^15.0.12",
     "ws": "^8.22.1"
