@@ -12,13 +12,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.14.10.vsix**.
+2. Select **claude-folder-agents-0.14.11.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.14.10.vsix --force`
+`code --install-extension claude-folder-agents-0.14.11.vsix --force`
 
 ## Claude workspace trust
 
