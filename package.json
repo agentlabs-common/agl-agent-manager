@@ -218,6 +218,18 @@
         "command": "claudeFolderAgents.about",
         "title": "Version 0.14.6",
         "category": "AGL Agent Manager"
+      },
+      {
+        "command": "claudeFolderAgents.addToTeam",
+        "title": "Add to Team",
+        "category": "AGL Agent Manager",
+        "icon": "$(organization)"
+      },
+      {
+        "command": "claudeFolderAgents.removeFromTeam",
+        "title": "Remove from Team",
+        "category": "AGL Agent Manager",
+        "icon": "$(history)"
       }
     ],
     "views": {
@@ -318,18 +330,28 @@
           "group": "session@1"
         },
         {
+          "command": "claudeFolderAgents.addToTeam",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /Ephemeral$/",
+          "group": "session@0"
+        },
+        {
+          "command": "claudeFolderAgents.removeFromTeam",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /Team$/",
+          "group": "session@0"
+        },
+        {
           "command": "claudeFolderAgents.hideSession",
-          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Running|Closed)$/",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Running|Closed)(Team|Ephemeral)?$/",
           "group": "session@2"
         },
         {
           "command": "claudeFolderAgents.restoreSession",
-          "when": "view == claudeFolderAgents.sessions && viewItem == agentSessionHidden",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSessionHidden/",
           "group": "session@2"
         },
         {
           "command": "claudeFolderAgents.deleteSession",
-          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Closed|Hidden)$/",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Closed|Hidden)(Team|Ephemeral)?$/",
           "group": "session@3"
         },
         {
@@ -381,6 +403,16 @@
           "command": "claudeFolderAgents.disableSkill",
           "when": "view == claudeFolderAgents.skills && viewItem == aglSkillEnabled",
           "group": "skill@2"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "claudeFolderAgents.addToTeam",
+          "when": "false"
+        },
+        {
+          "command": "claudeFolderAgents.removeFromTeam",
+          "when": "false"
         }
       ]
     },
