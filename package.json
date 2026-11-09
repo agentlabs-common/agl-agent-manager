@@ -242,6 +242,12 @@
         "title": "Delete Team",
         "category": "AGL Agent Manager",
         "icon": "$(trash)"
+      },
+      {
+        "command": "claudeFolderAgents.stopSession",
+        "title": "Stop Agent",
+        "category": "AGL Agent Manager",
+        "icon": "$(debug-stop)"
       }
     ],
     "views": {
@@ -362,8 +368,13 @@
           "group": "session@2"
         },
         {
+          "command": "claudeFolderAgents.stopSession",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSessionRunning(Team|Ephemeral)?$/",
+          "group": "session@3"
+        },
+        {
           "command": "claudeFolderAgents.deleteSession",
-          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Closed|Hidden)(Team|Ephemeral)?$/",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Running|Closed|Hidden)(Team|Ephemeral)?$/",
           "group": "session@3"
         },
         {
@@ -442,6 +453,10 @@
         },
         {
           "command": "claudeFolderAgents.deleteTeam",
+          "when": "false"
+        },
+        {
+          "command": "claudeFolderAgents.stopSession",
           "when": "false"
         }
       ]

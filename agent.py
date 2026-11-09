@@ -224,7 +224,7 @@ def save_yolo(path,state,name=''):
     with open(temp,'w') as stream:json.dump(state,stream)
     os.replace(temp,path)
     return out
-def restart_yolo(cwd,sid):
+def stop_session(cwd,sid):
     session=next((row for row in listing(cwd) if row['sessionId']==sid),None)
     if not session:raise RuntimeError('This session is not in the current working directory. Refresh the list.')
     cli=os.environ.get('CLAUDE_AGENTS_CLI','claude')
@@ -236,16 +236,20 @@ def restart_yolo(cwd,sid):
         for _ in range(120):
             if not any(row['sessionId']==sid and row.get('live') for row in listing(cwd)):break
             time.sleep(.5)
-        else:raise RuntimeError('Claude has not stopped yet. Wait for it to stop before restarting; a copy was prevented.')
+        else:raise RuntimeError('Claude has not stopped yet. Wait a moment and refresh.')
         time.sleep(1)
     elif session.get('live'):
-        if not process_alive(session):raise RuntimeError('Cannot verify the running Claude process. Refresh before restarting.')
+        if not process_alive(session):raise RuntimeError('Cannot verify the running Claude process. Refresh and try again.')
         os.kill(int(session['pid']),signal.SIGTERM)
         for _ in range(80):
             remaining=next((row for row in listing(cwd) if row['sessionId']==sid and row.get('live')),None)
             if not remaining:break
             time.sleep(.1)
-        else:raise RuntimeError('Claude has not stopped yet. Wait for it to exit before restarting; a duplicate session was prevented.')
+        else:raise RuntimeError('Claude has not stopped yet. Wait a moment and refresh.')
+    return session
+def restart_yolo(cwd,sid):
+    session=stop_session(cwd,sid)
+    cli=os.environ.get('CLAUDE_AGENTS_CLI','claude')
     path,state=saved_job(sid)
     if path:
         save_yolo(path,state,session.get('name') or '')
@@ -260,6 +264,7 @@ def main():
     elif action=='voices':result=voices(sys.argv[3],json.loads(sys.argv[4]) if len(sys.argv)>4 else None)
     elif action=='prepare':result=prepare(cwd,sys.argv[3],len(sys.argv)>4 and sys.argv[4]=='true')
     elif action=='delete':result=delete_session(cwd,sys.argv[3])
+    elif action=='stop':result=dict(session=stop_session(cwd,sys.argv[3]))
     elif action=='restart-yolo':result=restart_yolo(cwd,sys.argv[3])
     elif action=='new':
         import uuid
