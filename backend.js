@@ -2,7 +2,7 @@ const fs=require('node:fs/promises');const path=require('node:path');const os=re
 const{sshArgs,hostKey}=require('./remote');
 const UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 function quote(value){return "'"+String(value).replaceAll("'","'\"'\"'")+"'";}
-function userEnvironment(){const env={...process.env};for(const key of ['CLAUDECODE','HC_TERMINAL_ID','HC_SCOPE','CODEX_THREAD_ID'])delete env[key];if(!env.XDG_RUNTIME_DIR&&process.getuid)env.XDG_RUNTIME_DIR='/run/user/'+process.getuid();env.PATH=path.join(os.homedir(),'.local','bin')+path.delimiter+(env.PATH||'');return env;}
+function userEnvironment(){const env={...process.env};for(const key of ['CLAUDECODE','HC_TERMINAL_ID','HC_SCOPE','CODEX_THREAD_ID','COPILOT_AGENT_SESSION_ID','COPILOT_SESSION_CWD'])delete env[key];if(!env.XDG_RUNTIME_DIR&&process.getuid)env.XDG_RUNTIME_DIR='/run/user/'+process.getuid();env.PATH=path.join(os.homedir(),'.local','bin')+path.delimiter+(env.PATH||'');return env;}
 async function execute(file,args,options={}){const{input,...rest}=options;try{const task=exec(file,args,{encoding:'utf8',timeout:30000,maxBuffer:16*1024*1024,env:userEnvironment(),...rest});if(input!==undefined){task.child.stdin.on('error',()=>{});task.child.stdin.end(input);}const{stdout}=await task;return stdout.trim();}catch(error){throw new Error(error.code==='ENOENT'?'Required program not found: '+file:error.stderr?.trim()||error.message);}}
 class Backend{
  constructor(options={}){this.run=options.run||execute;this.sshPath=options.sshPath||'ssh';this.sshConfigFile=options.sshConfigFile||'';this.getVoiceOptions=options.getVoiceOptions;this.claude=options.claude||'claude';this.yolo=options.yolo===true;this.ttsModel=options.ttsModel||'';this.ttsVoice=options.ttsVoice||'';this.ttsStyle=options.ttsStyle||'';this.apiKey=options.apiKey||'';this.voicePython=options.voicePython||'';this.scope=options.scope;this.voiceCache=new Map();this.voiceStamps=new Map();this.voiceProbes=new Map();this.helper=path.join(__dirname,'agent.py');this.voiceScript=path.join(__dirname,'voice.sh');this.recordDir=path.join(os.tmpdir(),'agl-agent-manager-'+(process.getuid?.()||0));}
@@ -13,6 +13,7 @@ class Backend{
  async sessions(){const rows=await this.agent('list');return rows.map(s=>({...s,key:hostKey(this.scope)+':'+s.sessionId,remote:!!this.scope.host,host:this.scope.host}));}
  async sessionsUnder(roots){if(!roots.length)return[];const rows=await this.agent('managed-list',JSON.stringify(roots));return rows.map(s=>({...s,key:hostKey(this.scope)+':'+s.sessionId,remote:!!this.scope.host,host:this.scope.host}));}
  async prepare(session){if(!UUID.test(session.sessionId))throw new Error('Invalid session ID.');return this.agent('prepare',session.sessionId,String(this.yolo));}
+ async stopSession(session){if(!UUID.test(session.sessionId))throw new Error('Invalid session ID.');return this.agent('stop',session.sessionId);}
  async restartYolo(session){if(!UUID.test(session.sessionId))throw new Error('Invalid session ID.');return this.agent('restart-yolo',session.sessionId);}
  async deleteSession(session){if(!UUID.test(session.sessionId))throw new Error('Invalid session ID.');return this.agent('delete',session.sessionId);}
  async start(name,yolo=this.yolo){return this.agent('new',name,String(yolo===true));}

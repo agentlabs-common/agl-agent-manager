@@ -2,7 +2,7 @@
 
 ![Your agents. One command center. — AGL Agent Manager](https://raw.githubusercontent.com/agentlabs-common/agl-agent-manager/v0.14.17/media/pitch-hero.png)
 
-**Run a team of AI coding agents from VS Code.** Claude Code, Codex and Kimi Code agents each get their own folder of git worktrees, appear together in one sidebar, and talk to each other and to you through a shared agent portal. You see at a glance who is working, who is idle and who needs you, and you can listen to replies or talk back by voice.
+**Run a team of AI coding agents from VS Code.** Claude Code, Codex, Kimi and GitHub Copilot CLI Code agents each get their own folder of git worktrees, appear together in one sidebar, and talk to each other and to you through a shared agent portal. You see at a glance who is working, who is idle and who needs you, and you can listen to replies or talk back by voice.
 
 - **One list for every agent.** Claude (orange), Codex (green) and Kimi agents, grouped into your **teams** and **Ephemeral** runs, each split into **Working**, **Idle** and **Stopped**. A dot (●) marks an agent that needs you: a permission prompt, a question, or a reply you have not read yet.
 - **Isolated workspaces.** Each agent works in its own `.sessions/<agent>/<name>` folder with its own branch and worktrees, so agents never edit the same checkout.
@@ -367,3 +367,13 @@ Open this directory in VS Code and press **F5**.
 `npm run test:host` loads the extension in an isolated VS Code window (requires Xvfb).
 `npm run package` builds the VSIX.
 The packaged extension includes the ws WebSocket transport dependency.
+
+## GitHub Copilot CLI preview
+
+Use **New Copilot Session** or choose **Copilot** in the agent-folder wizard. Sign in first with `copilot login`; the adapter uses your existing subscription. `AGL Agent Manager: Copilot Path` selects the installed CLI. Current support is local, with SDK protocol 3 verified against CLI 1.0.108.
+
+Create/resume, native terminals, chat/readout history, teams, portal pages and native user skill switches are supported. Copilot skill switches currently affect the account, not just one agent folder. Agents opened in AGL can be stopped and resumed without deleting their conversation. Gemini voice retains its Linux requirements.
+
+Allowed messages can wake a stopped Copilot agent in the same conversation. Running agents use their listener; Hold, contact permissions, cooldown, failure backoff and duplicate-start locks apply. No YOLO/allow-all flags are added to a wake. Ambiguous activity leaves messages queued.
+
+See [the feature assessment](docs-copilot-assessment.md) for remaining gaps, including SSH, agent-folder-only skills and detailed live activity/permission badges. This is an integration candidate, not a claim of full provider parity.

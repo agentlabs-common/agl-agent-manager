@@ -1,7 +1,7 @@
-const{Backend}=require('./backend');const{CodexBackend}=require('./codex-backend');const{KimiBackend}=require('./kimi-backend');const LABELS={claude:'Claude',codex:'Codex',kimi:'Kimi'};
+const{Backend}=require('./backend');const{CodexBackend}=require('./codex-backend');const{KimiBackend}=require('./kimi-backend');const{CopilotBackend}=require('./copilot-backend');const LABELS={claude:'Claude',codex:'Codex',kimi:'Kimi',copilot:'Copilot'};
 class SessionBackend extends Backend{
- constructor(options={}){super(options);this.providers=options.providers||['claude','codex','kimi'];this.claudeBackend=new Backend(options);this.codexBackend=new CodexBackend(options);this.kimiBackend=new KimiBackend(options);this.warnings=[];}
- forSession(session){if(!session.provider||session.provider==='claude')return this.claudeBackend;if(session.provider==='codex')return this.codexBackend;if(session.provider==='kimi')return this.kimiBackend;throw new Error('Unsupported agent provider.');}
+ constructor(options={}){super(options);this.providers=options.providers||['claude','codex','kimi','copilot'];this.claudeBackend=new Backend(options);this.codexBackend=new CodexBackend(options);this.kimiBackend=new KimiBackend(options);this.copilotBackend=new CopilotBackend(options);this.warnings=[];}
+ forSession(session){if(!session.provider||session.provider==='claude')return this.claudeBackend;if(session.provider==='codex')return this.codexBackend;if(session.provider==='kimi')return this.kimiBackend;if(session.provider==='copilot')return this.copilotBackend;throw new Error('Unsupported agent provider.');}
  async sessionsUnder(roots,links=[],onUpdate){return this.collect('sessionsUnder',roots,links,onUpdate);}
  async sessions(){return this.collect('sessions');}
  async collect(method,...args){
@@ -21,9 +21,10 @@ class SessionBackend extends Backend{
   return providers.flatMap(provider=>completed.get(provider)||[]);
  }
  prepare(session){return this.forSession(session).prepare(session);}
+ stopSession(session){return this.forSession(session).stopSession(session);}
  deleteSession(session){return this.forSession(session).deleteSession(session);}
  restartYolo(session){return this.forSession(session).restartYolo(session);}
  async start(name,yolo=this.yolo,provider='claude'){const prepared=await this.forSession({provider}).start(name,yolo);return{...prepared,session:{...prepared.session,provider}};}
- dispose(){this.codexBackend.dispose();}
+ dispose(){this.codexBackend.dispose();this.copilotBackend.dispose();}
 }
 module.exports={SessionBackend};
