@@ -2,6 +2,10 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.14.14 (2026-11-09)
+
+**Fresh installs find the agent CLIs.** When VS Code is started from a desktop launcher it often lacks your shell's PATH, so Claude Code or Codex installed under nvm, npm global or `~/.claude/local` was not found. The extension now looks in those folders too. When a CLI really is missing, the message says to install it or set its path, instead of a raw `Errno 2` or `EPIPE`.
+
 ## 0.14.13 (2026-11-09)
 
 **Listed on the VS Code Marketplace as AGL Agent Manager** (ID `Agentlabs.agl-agent-manager`). The README opens with what the extension does and a quick start; this changelog is new; search keywords and categories are set. If Gemini Live lacks the `websockets` package, or no Gemini key is set, the error now says exactly what to do. Dictate is documented as optional, with what it needs.
