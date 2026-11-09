@@ -20,3 +20,6 @@ openui/package*.json
 test-results.log
 
 .listing-demo/**
+
+node_modules/playwright/**
+node_modules/playwright-core/**
