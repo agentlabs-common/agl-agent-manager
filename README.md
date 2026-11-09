@@ -15,7 +15,19 @@
 3. In the **AGL Agent Manager** view, press **+**, pick a provider and name the agent. It starts in its own session folder.
 4. Optional, for voice: run **AGL Agent Manager: Configure Gemini Voice** and paste a [Gemini API key](https://aistudio.google.com/apikey). The key is kept in VS Code's secret storage.
 
-Linux only for now. Voice also needs `arecord` and `aplay`; Gemini Live also needs a Python with the `websockets` package (see **Gemini Live** below).
+Needs Python 3 (`python3`; on Windows the `py` launcher or `python`) and git. Gemini Live also needs a Python with the `websockets` package (see **Gemini Live** below).
+
+## Platforms
+
+| | Linux | macOS | Windows |
+|---|---|---|---|
+| Agent list, teams, terminals, workspace folders | yes | yes | yes |
+| Agent portal, status pages, agent messaging | yes | yes | yes |
+| Stop, delete, restart in YOLO | yes | yes | yes |
+| Kimi running state | yes | sessions listed, not live state | sessions listed, not live state |
+| Voice: read aloud, Gemini Live, Dictate | yes | not yet | not yet |
+
+The automated tests run on all three systems for every change. Day-to-day use has been on Linux; please [report](https://github.com/agentlabs-common/agl-agent-manager/issues) anything that misbehaves on macOS or Windows. The prompt hooks call `node`, so Node.js should be on your PATH for unread-message notes in Claude and Kimi.
 
 ## Install
 
@@ -33,13 +45,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.14.14.vsix**.
+2. Select **claude-folder-agents-0.14.15.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.14.14.vsix --force`
+`code --install-extension claude-folder-agents-0.14.15.vsix --force`
 
 ## Claude workspace trust
 
@@ -273,8 +285,8 @@ A phone or browser client does not stream its microphone to the extension.
 ## Requirements
 
 - Native Claude Code with `claude agents --json`, `claude --bg`, and `claude attach` (checked with 2.1.318).
-- VS Code 1.85 or later, Linux, Python 3, and a trusted workspace.
-- For voice: arecord, aplay, a Gemini API key, and a Python environment with websockets.
+- VS Code 1.85 or later on Linux, macOS or Windows (see **Platforms**), Python 3, git, and a trusted workspace.
+- For voice (Linux for now): arecord, aplay, a Gemini API key, and a Python environment with websockets.
 - For live interactive tmux sessions: tmux.
 
 **AGL Agent Manager: Claude Path** sets the local CLI executable.

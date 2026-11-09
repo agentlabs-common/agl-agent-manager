@@ -26,7 +26,7 @@
     "theme": "dark"
   },
   "qna": "https://github.com/agentlabs-common/agl-agent-manager/issues",
-  "version": "0.14.14",
+  "version": "0.14.15",
   "publisher": "Agentlabs",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -237,7 +237,7 @@
       },
       {
         "command": "claudeFolderAgents.about",
-        "title": "Version 0.14.14",
+        "title": "Version 0.14.15",
         "category": "AGL Agent Manager"
       },
       {
