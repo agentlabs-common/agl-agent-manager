@@ -10,7 +10,8 @@ def run(args,cwd=None,both=False):
     for key in ('CLAUDECODE','HC_TERMINAL_ID','HC_SCOPE'):env.pop(key,None)
     env['PATH']=os.path.expanduser('~/.local/bin')+os.pathsep+env.get('PATH','')
     # stdin is never passed on: a claude that starts a session would read it as a prompt (seen when called inside a `while read` loop).
-    p=subprocess.run(args,cwd=cwd,env=env,capture_output=True,text=True,stdin=subprocess.DEVNULL)
+    try:p=subprocess.run(args,cwd=cwd,env=env,capture_output=True,text=True,stdin=subprocess.DEVNULL)
+    except FileNotFoundError:raise RuntimeError(args[0]+' not found. Install Claude Code (https://code.claude.com) or set AGL Agent Manager: Claude Path.') from None
     if p.returncode:raise RuntimeError(p.stderr.strip() or p.stdout.strip() or 'Command failed')
     return (p.stdout+'\n'+p.stderr).strip() if both else p.stdout.strip()
 def metadata(sid):

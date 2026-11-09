@@ -85,3 +85,14 @@ test('Kimi gets the prompt hook once in config.toml, with --plain, and only when
   const text = await fs.readFile(path.join(home, '.kimi-code', 'config.toml'), 'utf8');
   assert.match(text, /^default_model = "k2"\n\n# Added by AGL Agent Manager[^\n]*\n\[\[hooks\]\]\nevent = "UserPromptSubmit"\ncommand = "node \/x\/agl-skill-check.cjs --plain"\n$/);
 }));
+test('findCli keeps a name on PATH, finds nvm or ~/.claude/local installs off PATH, and leaves explicit paths alone', async () => tmp(async (home) => {
+  const fs = require('node:fs/promises'); const path = require('node:path'); const { findCli } = require('../backend.js');
+  const bin = path.join(home, 'onpath'); await fs.mkdir(bin); await fs.writeFile(path.join(bin, 'claude'), '');
+  assert.equal(findCli('claude', home, bin), 'claude');
+  const nvm = path.join(home, '.nvm', 'versions', 'node', 'v22.1.0', 'bin'); await fs.mkdir(nvm, { recursive: true }); await fs.writeFile(path.join(nvm, 'codex'), '');
+  assert.equal(findCli('codex', home, '/usr/bin'), path.join(nvm, 'codex'));
+  const local = path.join(home, '.claude', 'local'); await fs.mkdir(local, { recursive: true }); await fs.writeFile(path.join(local, 'claude'), '');
+  assert.equal(findCli('claude', home, '/nowhere'), path.join(local, 'claude'));
+  assert.equal(findCli('nothing-here', home, '/nowhere'), 'nothing-here');
+  assert.equal(findCli('/opt/x/claude', home, ''), '/opt/x/claude');
+}));

@@ -6,7 +6,7 @@ class CodexRpc extends EventEmitter{
  async open(){
   const remote=this.scope?.host;const command=[this.codex,'app-server','proxy'];
   const child=this.spawn(remote?this.sshPath:command[0],remote?[...sshArgs(this.scope,this.sshConfigFile),'-T','-o','BatchMode=yes','-o','ConnectTimeout=8','--',remote,'export PATH="$HOME/.local/bin:$PATH"; exec '+command.map(quote).join(' ')]:command.slice(1),{env:userEnvironment(),stdio:['pipe','pipe','pipe']});this.child=child;let stderr='';
-  child.stderr.setEncoding('utf8');child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});child.stdin.on('error',error=>this.fail(error));child.once('error',error=>this.fail(error));
+  child.stderr.setEncoding('utf8');child.stderr.on('data',chunk=>{stderr=(stderr+chunk).slice(-3000);});/* A missing codex makes stdin fail with EPIPE before spawn reports ENOENT; report the real cause. */child.stdin.on('error',error=>{if(error.code!=='EPIPE')this.fail(error);});child.once('error',error=>this.fail(error.code==='ENOENT'?new Error((remote?'ssh':command[0])+' not found. '+(remote?'Install OpenSSH.':'Install Codex or set AGL Agent Manager: Codex Path.')):error));
   const stream=Duplex.from({readable:child.stdout,writable:child.stdin});for(const method of ['setTimeout','setNoDelay','setKeepAlive'])stream[method]=()=>stream;
   const agent=new Agent({keepAlive:false});agent.createConnection=()=>stream;this.agent=agent;
   const socket=new this.Socket('ws://localhost/',{agent,createConnection:()=>stream,handshakeTimeout:10000,maxPayload:32*1024*1024});this.socket=socket;
