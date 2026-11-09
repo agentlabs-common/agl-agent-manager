@@ -221,7 +221,7 @@
       },
       {
         "command": "claudeFolderAgents.addToTeam",
-        "title": "Add to Team",
+        "title": "Add to Team…",
         "category": "AGL Agent Manager",
         "icon": "$(organization)"
       },
@@ -230,6 +230,18 @@
         "title": "Remove from Team",
         "category": "AGL Agent Manager",
         "icon": "$(history)"
+      },
+      {
+        "command": "claudeFolderAgents.renameTeam",
+        "title": "Rename Team",
+        "category": "AGL Agent Manager",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "claudeFolderAgents.deleteTeam",
+        "title": "Delete Team",
+        "category": "AGL Agent Manager",
+        "icon": "$(trash)"
       }
     ],
     "views": {
@@ -331,12 +343,12 @@
         },
         {
           "command": "claudeFolderAgents.addToTeam",
-          "when": "view == claudeFolderAgents.sessions && viewItem =~ /Ephemeral$/",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Running|Closed)(Team|Ephemeral)$/",
           "group": "session@0"
         },
         {
           "command": "claudeFolderAgents.removeFromTeam",
-          "when": "view == claudeFolderAgents.sessions && viewItem =~ /Team$/",
+          "when": "view == claudeFolderAgents.sessions && viewItem =~ /^agentSession(Running|Closed)Team$/",
           "group": "session@0"
         },
         {
@@ -403,6 +415,16 @@
           "command": "claudeFolderAgents.disableSkill",
           "when": "view == claudeFolderAgents.skills && viewItem == aglSkillEnabled",
           "group": "skill@2"
+        },
+        {
+          "command": "claudeFolderAgents.renameTeam",
+          "when": "view == claudeFolderAgents.sessions && viewItem == aglTeam",
+          "group": "team@1"
+        },
+        {
+          "command": "claudeFolderAgents.deleteTeam",
+          "when": "view == claudeFolderAgents.sessions && viewItem == aglTeam",
+          "group": "team@2"
         }
       ],
       "commandPalette": [
@@ -412,6 +434,14 @@
         },
         {
           "command": "claudeFolderAgents.removeFromTeam",
+          "when": "false"
+        },
+        {
+          "command": "claudeFolderAgents.renameTeam",
+          "when": "false"
+        },
+        {
+          "command": "claudeFolderAgents.deleteTeam",
           "when": "false"
         }
       ]
