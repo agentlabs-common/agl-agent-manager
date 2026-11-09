@@ -4,14 +4,15 @@ import glob,json,os,re,shutil,signal,subprocess,sys,time
 UUID=re.compile(r'^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$',re.I)
 VOICE=re.compile(r'(?<!`)<voice>((?:(?!<voice>).)*?)</voice>',re.S)
 VIEW=re.compile(r'^<view>[ \t]*\n(.*?)\n</view>[ \t]*$',re.S|re.M)
-def run(args,cwd=None):
+def run(args,cwd=None,both=False):
     env=dict(os.environ)
     if cwd is not None:env['PWD']=os.path.realpath(cwd)
     for key in ('CLAUDECODE','HC_TERMINAL_ID','HC_SCOPE'):env.pop(key,None)
     env['PATH']=os.path.expanduser('~/.local/bin')+os.pathsep+env.get('PATH','')
-    p=subprocess.run(args,cwd=cwd,env=env,capture_output=True,text=True)
+    # stdin is never passed on: a claude that starts a session would read it as a prompt (seen when called inside a `while read` loop).
+    p=subprocess.run(args,cwd=cwd,env=env,capture_output=True,text=True,stdin=subprocess.DEVNULL)
     if p.returncode:raise RuntimeError(p.stderr.strip() or p.stdout.strip() or 'Command failed')
-    return p.stdout.strip()
+    return (p.stdout+'\n'+p.stderr).strip() if both else p.stdout.strip()
 def metadata(sid):
     matches=[]
     for file in glob.glob(os.path.expanduser('~/.claude/sessions/*.json')):
@@ -228,8 +229,15 @@ def restart_yolo(cwd,sid):
     if not session:raise RuntimeError('This session is not in the current working directory. Refresh the list.')
     cli=os.environ.get('CLAUDE_AGENTS_CLI','claude')
     if session.get('live') and session.get('kind')=='background':
-        # `claude stop` returns once it has stopped; a finished background session still lists as live, so do not wait on the list.
+        # `claude stop` can return before the session has fully stopped; resuming it then starts a copy with a new id, an auto
+        # name and no saved options (auth-lead, 2026-11-09: the copy appeared 0.8 s after the stop). Wait until Claude Code
+        # no longer reports a status for it.
         run([cli,'stop',session['id']],cwd)
+        for _ in range(120):
+            if not any(row['sessionId']==sid and row.get('live') for row in listing(cwd)):break
+            time.sleep(.5)
+        else:raise RuntimeError('Claude has not stopped yet. Wait for it to stop before restarting; a copy was prevented.')
+        time.sleep(1)
     elif session.get('live'):
         if not process_alive(session):raise RuntimeError('Cannot verify the running Claude process. Refresh before restarting.')
         os.kill(int(session['pid']),signal.SIGTERM)
@@ -239,7 +247,10 @@ def restart_yolo(cwd,sid):
             time.sleep(.1)
         else:raise RuntimeError('Claude has not stopped yet. Wait for it to exit before restarting; a duplicate session was prevented.')
     path,state=saved_job(sid)
-    if path:save_yolo(path,state,session.get('name') or '');run([cli,'--bg','--resume',sid],cwd)
+    if path:
+        save_yolo(path,state,session.get('name') or '')
+        said=run([cli,'--bg','--resume',sid],cwd,both=True)
+        if 'copy' in said.lower():raise RuntimeError('Claude Code started a copy instead of resuming this session: '+said[:300])
     else:run([cli,'--bg','--resume',sid,'--dangerously-skip-permissions'],cwd)
     return dict(session={**session,'kind':'background','live':True,'state':'running'},argv=[cli,'attach',sid])
 def main():
