@@ -1,7 +1,7 @@
 {
   "name": "claude-folder-agents",
   "displayName": "AGL Agent Manager",
-  "description": "Folder-scoped Claude and Codex sessions with native terminals, Gemini voice control and full-reply TTS.",
+  "description": "Folder-scoped Claude, Codex and Kimi sessions with native terminals, Gemini voice control and full-reply TTS.",
   "version": "0.13.2",
   "publisher": "local-tools",
   "license": "MIT",
@@ -437,20 +437,27 @@
           "default": "codex",
           "description": "Path to the native Codex CLI. Remote SSH hosts use the same command name."
         },
+        "claudeFolderAgents.kimiPath": {
+          "type": "string",
+          "default": "kimi",
+          "description": "Path to the native Kimi Code CLI. The default also finds ~/.kimi-code/bin/kimi. Kimi sessions are local only."
+        },
         "claudeFolderAgents.providers": {
           "type": "array",
           "items": {
             "type": "string",
             "enum": [
               "claude",
-              "codex"
+              "codex",
+              "kimi"
             ]
           },
           "uniqueItems": true,
           "minItems": 1,
           "default": [
             "claude",
-            "codex"
+            "codex",
+            "kimi"
           ],
           "description": "Agent providers to show for the selected working directory."
         },
