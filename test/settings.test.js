@@ -8,3 +8,18 @@ test('Indian female voice shortcut filters the live catalog and previews before 
 test('empty filtered catalog leaves the selected voice unchanged',async()=>{const s=setup([{id:'ttsVoice'},{catalog:{language:'hi-IN',gender:'female'}}]);await configureGemini(s.vscode,s.context,{voice:async()=>JSON.stringify({voices:[]})});assert.equal(s.updates.length,0);assert.match(s.info[0],/No Gemini voices match/);});
 
 test('natural Live timing offers a five-second pause and prompt-polish settings',async()=>{const s=setup([{id:'livePauseSeconds'},{value:5},{id:'refineSpokenPrompts'},{value:false}]);await configureGemini(s.vscode,s.context);await configureGemini(s.vscode,s.context);assert.equal(s.values.livePauseSeconds,5);assert.equal(s.values.refineSpokenPrompts,false);assert.ok(s.info.every(text=>text.includes('Reconnect')));});
+
+test('Live model, speech style and Python settings save the requested value',async()=>{
+ const s=setup([{id:'liveModel'},{id:'ttsStyle'},{id:'voicePython'}],['example-live-model','calm and clear','/example/python']);
+ for(let i=0;i<3;i++)await configureGemini(s.vscode,s.context);
+ assert.deepEqual(s.updates.map(x=>[x.key,x.value]),[['liveModel','example-live-model'],['ttsStyle','calm and clear'],['voicePython','/example/python']]);
+ assert.ok(s.updates.every(x=>x.target===1));
+});
+
+test('barge-in, invalid custom pause and All settings have meaningful effects',async()=>{
+ const s=setup([{id:'liveBargeIn'},{value:true},{id:'livePauseSeconds'},{custom:true},{id:'all'}],['99']);const commands=[];
+ s.vscode.commands.executeCommand=async(...args)=>commands.push(args);
+ await configureGemini(s.vscode,s.context);await configureGemini(s.vscode,s.context);await configureGemini(s.vscode,s.context);
+ assert.equal(s.values.liveBargeIn,true);assert.equal(s.values.livePauseSeconds,undefined);
+ assert.deepEqual(commands,[['workbench.action.openSettings','@ext:Agentlabs.claude-folder-agents']]);
+});
