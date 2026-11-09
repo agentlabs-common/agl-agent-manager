@@ -18,4 +18,11 @@ jobs:
         with:
           python-version: '3.12'
       - run: npm ci
+      # Temp folders on their real path: macOS links /var to /private/var and Windows CI shortens the user folder (RUNNER~1).
+      - name: Real temp folder
+        shell: bash
+        run: |
+          echo "TMPDIR=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
+          echo "TEMP=$RUNNER_TEMP" >> "$GITHUB_ENV"
       - run: node --test
