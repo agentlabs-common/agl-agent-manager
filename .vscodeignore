@@ -18,3 +18,5 @@ openui/package*.json
 .github/**
 
 test-results.log
+
+.listing-demo/**

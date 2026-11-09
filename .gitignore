@@ -9,3 +9,5 @@ preview.html
 openui/node_modules/
 
 test-results.log
+
+.listing-demo/
