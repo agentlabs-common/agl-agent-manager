@@ -184,7 +184,7 @@ Everything you run on this machine has one canonical name, ending in `.localhost
 - **Ports:** machine-keeper gives each team one block; your lead gives you 100 ports from it. Fixed slots in your range: ui x00, console x01, auth x10, edge x11, core x20, api x21, db x30, s3 x31, x40 and up yours. Bind to 127.0.0.1 only. Ask your lead for a range; don't pick one.
 - **Label every container** with its name: `agl.host: auth.dev-1.desk.localhost`, beside `agl.session`. The portal shows it and the keeper reads it, so a port change needs no report.
 - **Links have no port.** machine-keeper's gateway on port 80 routes each `agl.host` name to its container, so write `http://auth.dev-1.desk.localhost`. If it can't tell which port is the app's, add the label `agl.port`.
-- Each application must also allow its name in its sign-in redirects, cookies and allowed origins. From the Desk pilot: one name must be canonical, so redirect any alias to it (`lead.desk.localhost` to `desk.localhost`); Auth and its hosted pages share one host, because the sign-in cookie is per host, not per port; backend calls in test harnesses must use the UI's name, not 127.0.0.1. Auth needs 2.1.1 or later to allow http redirects on `*.localhost`.
+- Each application must also allow its name in its sign-in redirects, cookies and allowed origins. From the Desk pilot: one name must be canonical, so redirect any alias to it (`lead.desk.localhost` to `desk.localhost`); Auth and its hosted pages share one host, because the sign-in cookie is per host, not per port; backend calls in test harnesses must use the UI's name, not 127.0.0.1. Auth needs 2.2.0 or later to allow http redirects on `*.localhost`.
 
 ## Tickets, wiki and playbooks
 
