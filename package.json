@@ -1,5 +1,5 @@
 {
-  "name": "agl-agent-manager",
+  "name": "claude-folder-agents",
   "displayName": "AGL Agent Manager",
   "description": "Run a team of Claude Code, Codex and Kimi agents from VS Code: isolated worktree folders, one sidebar with teams, an agent portal for status and messages, and Gemini voice.",
   "categories": [

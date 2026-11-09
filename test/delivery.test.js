@@ -96,3 +96,14 @@ test('findCli keeps a name on PATH, finds nvm or ~/.claude/local installs off PA
   assert.equal(findCli('nothing-here', home, '/nowhere'), 'nothing-here');
   assert.equal(findCli('/opt/x/claude', home, ''), '/opt/x/claude');
 }));
+test('Windows: findCli resolves codex.cmd to a full path and keeps claude.exe by name; Python uses the py launcher when present', async () => tmp(async (home) => {
+  const fs = require('node:fs/promises'); const path = require('node:path'); const { findCli, pythonCommand } = require('../backend.js');
+  const bin = path.join(home, 'bin'); await fs.mkdir(bin); await fs.writeFile(path.join(bin, 'codex.cmd'), ''); await fs.writeFile(path.join(bin, 'claude.exe'), '');
+  assert.equal(findCli('codex', home, bin, 'win32'), path.join(bin, 'codex.cmd'));
+  assert.equal(findCli('claude', home, bin, 'win32'), 'claude');
+  assert.deepEqual(pythonCommand('linux', bin), ['python3']);
+  assert.deepEqual(pythonCommand('darwin', bin), ['python3']);
+  assert.deepEqual(pythonCommand('win32', bin), ['python']);
+  await fs.writeFile(path.join(bin, 'py.exe'), '');
+  assert.deepEqual(pythonCommand('win32', bin), ['py', '-3']);
+}));

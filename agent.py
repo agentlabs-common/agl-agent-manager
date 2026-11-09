@@ -196,6 +196,14 @@ def delete_session(cwd,sid):
     return dict(deleted=True)
 
 def process_alive(session):
+    if not os.path.isdir('/proc'):
+        # macOS and Windows have no /proc. POSIX: signal 0 only checks the pid exists. Windows: os.kill would terminate it, so trust Claude Code's own live report.
+        try:pid=int(session['pid'])
+        except (KeyError,ValueError,TypeError):return False
+        if os.name=='nt':return True
+        try:os.kill(pid,0);return True
+        except PermissionError:return True
+        except OSError:return False
     try:
         stat=open('/proc/%s/stat'%int(session['pid'])).read().rsplit(')',1)[1].split()
         return stat[0]!='Z' and stat[19]==str(session['procStart'])

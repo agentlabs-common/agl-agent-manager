@@ -27,19 +27,19 @@ Install **AGL Agent Manager** (publisher Agentlabs) from the Visual Studio Marke
 - one UserPromptSubmit hook in `~/.claude/settings.json`, and in `~/.kimi-code/config.toml` when Kimi is installed (a backup is written next to each file first).
 Agents use these to keep status pages and to message each other. The extension itself sends data only for voice: to Google Gemini (speech and Live) and, for Dictate, to Deepgram, each with your own API key. The agent CLIs you run talk to their own providers.
 
-Moving from an earlier VSIX (ID `local-tools.claude-folder-agents` or `Agentlabs.claude-folder-agents`): uninstall that copy. Settings and teams carry over; hidden sessions and each window's list filter start fresh.
+Moving from a VSIX installed before 0.14.12 (ID `local-tools.claude-folder-agents`) or from a 0.14.13–0.14.14 test build (ID `Agentlabs.agl-agent-manager`): uninstall that copy. Settings and teams carry over; hidden sessions and each window's list filter start fresh.
 
 Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases/latest).
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **agl-agent-manager-0.14.14.vsix**.
+2. Select **claude-folder-agents-0.14.14.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension agl-agent-manager-0.14.14.vsix --force`
+`code --install-extension claude-folder-agents-0.14.14.vsix --force`
 
 ## Claude workspace trust
 
