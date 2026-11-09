@@ -23,3 +23,6 @@ test-results.log
 
 node_modules/playwright/**
 node_modules/playwright-core/**
+
+.audit/**
+audit-*.log

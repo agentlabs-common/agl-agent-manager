@@ -1,6 +1,6 @@
 const{test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const vm=require('node:vm');const path=require('node:path');
-function load(LiveClient=class{},vscode={}){const module={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../voice-panel.js'),'utf8'),{module,require:name=>name==='vscode'?vscode:name==='./live-client'?{LiveClient}:require(name),setInterval,clearInterval,setTimeout,Set});return module.exports;}
-function setup(VoicePanel){const panel=Object.create(VoicePanel.prototype),calls=[];panel.session={sessionId:'sid',name:'Claude'};panel.terminal={sendText:(...args)=>calls.push({input:args})};panel.actions=Promise.resolve();panel.data={items:[],views:[]};panel.seen=new Set();panel.spokenTurns=new Set();panel.early=true;panel.liveLines=[];panel.auto=false;panel.post=async msg=>calls.push(msg);panel.backend={sessions:async()=>[{sessionId:'sid'}],voiceData:async()=>({session:'sid',items:[],views:[]}),voice:async(...args)=>{calls.push(args);return'idle';}};return{panel,calls};}
+function load(LiveClient=class{},vscode={}){const sourceRequire=require('node:module').createRequire(path.join(__dirname,'../voice-panel.js'));const module={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../voice-panel.js'),'utf8'),{module,require:name=>name==='vscode'?vscode:name==='./live-client'?{LiveClient}:sourceRequire(name),setInterval,clearInterval,setTimeout,Set});return module.exports;}
+function setup(VoicePanel){const panel=Object.create(VoicePanel.prototype),calls=[];panel.platform='linux';panel.session={sessionId:'sid',name:'Claude'};panel.terminal={sendText:(...args)=>calls.push({input:args})};panel.actions=Promise.resolve();panel.data={items:[],views:[]};panel.seen=new Set();panel.spokenTurns=new Set();panel.early=true;panel.liveLines=[];panel.auto=false;panel.post=async msg=>calls.push(msg);panel.backend={sessions:async()=>[{sessionId:'sid'}],voiceData:async()=>({session:'sid',items:[],views:[]}),voice:async(...args)=>{calls.push(args);return'idle';}};return{panel,calls};}
 test('auto-speak reads new replies once locally, including after an empty first load',async()=>{const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);await panel.refresh();await panel.handle({type:'auto',on:true});panel.backend.voiceData=async()=>({session:'sid',items:[{ts:'1',text:'Reply'},{ts:'2',text:'Prompt',you:true}],views:[]});await panel.refresh();await panel.refresh();const plays=calls.filter(c=>Array.isArray(c)&&c[0]==='play');assert.equal(plays.length,1);assert.deepEqual(plays[0],['play','Reply']);});
 test('voice prompts go to the pinned terminal and closed or removed sessions reject input',async()=>{const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);await panel.handle({type:'send',text:'Review changes'});assert.deepEqual(calls.find(c=>c.input).input,['Review changes',false]);panel.terminal.exitStatus={code:0};await assert.rejects(panel.handle({type:'send',text:'no'}),/closed/);delete panel.terminal.exitStatus;panel.backend.sessions=async()=>[];await assert.rejects(panel.handle({type:'send',text:'no'}),/working directory/);});
 
@@ -23,7 +23,7 @@ test('reply text reaches both tabs even with auto-speak off and a failed audio h
 test('a hung playback status cannot delay publishing replies',async()=>{const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);panel.backend.voiceData=async()=>({items:[{id:'reply',text:'Visible immediately.'}],views:[]});panel.backend.voice=async action=>action==='state'?new Promise(()=>{}):'';await panel.refresh();assert.ok(calls.some(m=>m.type==='voices'&&m.items[0].text==='Visible immediately.'));});
 test('Dictate is plain speech-to-text: first press records, second press sends, Live mic pauses meanwhile',async()=>{const{VoicePanel}=load(class{},{workspace:{getConfiguration:()=>({get:(key,fallback)=>fallback})}});const{panel,calls}=setup(VoicePanel);panel.terminal.exitStatus=undefined;const live=[];panel.liveClient={ready:true,command:(c,e)=>live.push({c,...e})};let spoken='hello agent';panel.backend.voice=async(...args)=>{calls.push(args);return args[0]==='finish'?spoken:args[0]==='partial'?'hello':'idle';};
  await panel.handle({type:'dictate'});assert.ok(calls.some(c=>Array.isArray(c)&&c[0]==='record'));assert.ok(calls.some(c=>c.type==='dictation'&&c.state==='listening'));assert.ok(live.some(m=>m.c==='mute'&&m.on===true));
- await assert.rejects(Promise.resolve().then(()=>{const other=Object.create(VoicePanel.prototype);other.terminal=panel.terminal;other.backend=panel.backend;other.post=async()=>{};other.session=panel.session;return other.dictate();}),/Another agent is dictating/);
+ await assert.rejects(Promise.resolve().then(()=>{const other=Object.create(VoicePanel.prototype);other.platform='linux';other.terminal=panel.terminal;other.backend=panel.backend;other.post=async()=>{};other.session=panel.session;return other.dictate();}),/Another agent is dictating/);
  await panel.handle({type:'dictate'});const inputs=calls.filter(m=>m.input).map(m=>m.input);assert.deepEqual(JSON.parse(JSON.stringify(inputs)),[['hello agent',false],['\r',false]]);assert.ok(live.some(m=>m.c==='mute'&&m.on===false));assert.equal(calls.filter(c=>c.type==='dictation').at(-1).state,'idle');
  spoken='';await panel.handle({type:'dictate'});await assert.rejects(panel.dictate(),/No speech was detected/);assert.equal(calls.filter(c=>c.type==='dictation').at(-1).state,'idle');});
 
@@ -61,7 +61,69 @@ test('the portal button beside Stop opens this agent on the agent portal',async(
  const panel=Object.create(module.exports.VoicePanel.prototype);panel.post=async()=>{};panel.session={cwd:path.join(root,'repo')};await panel.handle({type:'openStatus'});
  assert.deepEqual(JSON.parse(JSON.stringify(calls[0])),['claudeFolderAgents.openStatusPage',{agent:'claude',folder:'hrms-dev'}]);}finally{await fs.promises.rm(base,{recursive:true,force:true});}});
 test('a partial that arrives after dictation ended does not mark the button recording again',async()=>{const m={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../voice-panel.js'),'utf8'),{module:m,require:n=>n==='vscode'?{workspace:{}}:n==='./live-client'?{LiveClient:class{}}:require(n),setInterval:()=>1,clearInterval(){},setTimeout,Set,Map});
- const panel=Object.create(m.exports.VoicePanel.prototype);const posts=[];panel.post=async x=>posts.push(x);panel.session={};panel.terminal={sendText(){},exitStatus:undefined};panel.assertTarget=async()=>{};
+ const panel=Object.create(m.exports.VoicePanel.prototype);panel.platform='linux';const posts=[];panel.post=async x=>posts.push(x);panel.session={};panel.terminal={sendText(){},exitStatus:undefined};panel.assertTarget=async()=>{};
  let release;const slow=new Promise(r=>release=r);panel.backend={voice:async(op)=>op==='partial'?slow:op==='finish'?'':'idle'};
  await panel.dictate();const poll=panel.pollDictation();await panel.cancelDictation();release('late words');await poll;
  assert.equal(posts.filter(p=>p.type==='dictation').at(-1).state,'idle','the last dictation message must be idle');});
+
+
+test('Interrupt reaches the pinned terminal even when audio cleanup fails',async()=>{
+ const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);panel.backend.voice=async()=>{throw Error('audio backend unavailable');};
+ panel.refresh=async()=>{};await panel.handle({type:'interrupt'});
+ assert.deepEqual(calls.find(c=>c.input).input,['\x03',false]);
+ assert.ok(calls.some(c=>c.type==='error'&&/Agent interrupted/.test(c.message)));
+});
+
+test('Interrupt rejects a closed or removed target instead of silently succeeding',async()=>{
+ const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);panel.terminal.exitStatus={code:0};
+ await assert.rejects(panel.handle({type:'interrupt'}),/closed/);assert.ok(!calls.some(c=>c.input));
+ delete panel.terminal.exitStatus;panel.backend.sessions=async()=>[];
+ await assert.rejects(panel.handle({type:'interrupt'}),/working directory/);
+});
+
+test('terminal closure during submission preserves the draft and never acknowledges sent',async()=>{
+ const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);
+ panel.terminal.sendText=(...input)=>{calls.push({input});panel.terminal.exitStatus={code:0};};
+ await assert.rejects(panel.sendText('Keep this prompt'),/kept as a draft/);
+ assert.equal(panel.pendingDraft,'Keep this prompt');assert.ok(calls.some(c=>c.type==='draft'));
+ assert.ok(!calls.some(c=>c.type==='sent'));
+});
+
+test('Refresh explicitly reloads status even within its periodic polling interval',async()=>{
+ const{VoicePanel}=load();const{panel}=setup(VoicePanel);panel.notesAt=Date.now();let forced=0;
+ panel.postNotes=async force=>{if(force)forced++;};await panel.handle({type:'refresh'});assert.equal(forced,1);
+});
+
+test('Status distinguishes Markdown, HTML and OpenUI without pretending a rich status is missing',async()=>{
+ const os=require('node:os'),base=await fs.promises.mkdtemp(path.join(os.tmpdir(),'agl-status-audit-'));
+ try{const root=path.join(base,'.sessions','claude','sample');await fs.promises.mkdir(path.join(root,'.agl'),{recursive:true});await fs.promises.writeFile(path.join(root,'.agl-session.json'),'{}');
+ const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);panel.session.cwd=root;
+ await fs.promises.writeFile(path.join(root,'.agl/STATUS.md'),'---\nstate: working\nheadline: Testing\n---\n| Item | Status |\n| --- | --- |\n| API | Pass |');
+ await panel.postNotes(true);assert.match(calls.at(-1).html,/<table>/);assert.equal(calls.at(-1).richSummary,undefined);
+ await fs.promises.writeFile(path.join(root,'.agl/STATUS.html'),'<meta name="agl:state" content="working"><meta name="agl:headline" content="HTML status"><h1>Ready</h1>');
+ await panel.postNotes(true);assert.equal(calls.at(-1).richSummary.format,'html');assert.equal(calls.at(-1).headline,'HTML status');
+ await fs.promises.writeFile(path.join(root,'.agl/STATUS.openui'),'root = Status("working", "OpenUI status", "2026-11-09 12:00", [], [work], [], [])\nwork = WorkItem("API", "working", "Build", [], [], "Test")');
+ await panel.postNotes(true);assert.equal(calls.at(-1).richSummary.format,'openui');assert.equal(calls.at(-1).richSummary.work[0].name,'API');
+ }finally{await fs.promises.rm(base,{recursive:true,force:true});}
+});
+
+test('a broken status file does not block refreshing the agent history',async()=>{
+ const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);let refreshed=false;
+ panel.postNotes=async()=>{throw Error('invalid review data');};panel.refresh=async()=>{refreshed=true;};
+ await panel.handle({type:'refresh'});assert.equal(refreshed,true);assert.ok(calls.some(c=>c.operation==='notes'&&/Status refresh failed/.test(c.message)));
+});
+
+test('skill save failures carry their operation back through the real message dispatcher',async()=>{
+ let receive;const posted=[];const vscode={workspace:{isTrusted:true},ViewColumn:{Two:2},Uri:{joinPath:()=>({})},window:{createWebviewPanel:()=>({webview:{asWebviewUri:()=>'',onDidReceiveMessage:fn=>{receive=fn;},postMessage:async message=>posted.push(message)},onDidDispose:()=>{}})}};
+ const{VoicePanel}=load(class{},vscode);const panel=new VoicePanel({extensionUri:{}},{voice:async()=>''},{sessionId:'fixture'}, {},()=>{});clearInterval(panel.interval);
+ panel.postSkills=async()=>{throw Error('save failed');};receive({type:'skillSet',kind:'skill',name:'fixture',on:false});await panel.actions;
+ assert.equal(posted.at(-1).operation,'skillSet');assert.equal(posted.at(-1).message,'save failed');await panel.close();
+});
+
+test('non-Linux panes do not poll unavailable audio but can still interrupt agents',async()=>{
+ const{VoicePanel}=load();const{panel,calls}=setup(VoicePanel);panel.platform='win32';
+ await panel.refreshSpeech();assert.ok(!calls.some(c=>Array.isArray(c)));
+ await assert.rejects(panel.startLive(),/Linux only/);await assert.rejects(panel.dictate(),/Linux only/);
+ await panel.handle({type:'interrupt'});assert.ok(calls.some(c=>c.input?.[0]==='\x03'));
+ assert.ok(!calls.some(c=>Array.isArray(c)));
+});

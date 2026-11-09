@@ -11,3 +11,6 @@ openui/node_modules/
 test-results.log
 
 .listing-demo/
+
+.audit/
+audit-*.log

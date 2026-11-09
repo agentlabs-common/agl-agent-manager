@@ -28,15 +28,47 @@ test('voice panel Skills tab lists and switches skills for its own agent folder 
  vm.runInNewContext(require('node:fs').readFileSync(path.join(__dirname,'../voice-panel.js'),'utf8'),{module,require:name=>name==='vscode'?{workspace:{isTrusted:true}}:name==='./live-client'?{LiveClient:class{}}:name==='./workspace-service'?{WorkspaceService}:require(name),setInterval,clearInterval,setTimeout,Set});
  const panel=Object.create(module.exports.VoicePanel.prototype);const posts=[];panel.post=async m=>posts.push(m);panel.backend={};panel.session={provider:'claude',cwd:'/ws/.sessions/claude/one',sessionId:'sid'};
  await panel.handle({type:'skills'});assert.equal(runs[0].action,'skills-agent-list');assert.equal(runs[0].root,'/ws/.sessions/claude/one');assert.equal(posts.at(-1).changed,false);
- await panel.handle({type:'skillSet',kind:'skill',name:'a',on:false,root:'/elsewhere'});assert.deepEqual(runs[1],{action:'skills-agent-set',root:'/ws/.sessions/claude/one',kind:'skill',name:'a',on:false});assert.equal(posts.at(-1).changed,true);
+ await panel.handle({type:'skillSet',kind:'skill',name:'a',on:false,root:'/elsewhere'});assert.deepEqual(runs[1],{action:'skills-agent-set',root:'/ws/.sessions/claude/one',kind:'skill',name:'a',file:undefined,on:false,provider:'claude'});assert.equal(posts.at(-1).changed,true);
  await panel.handle({type:'skillSet',kind:'bogus',name:'a',on:false});assert.equal(runs.length,2);
- panel.session={provider:'codex',cwd:'/x'};await panel.handle({type:'skills'});assert.equal(posts.at(-1).unsupported,true);assert.equal(runs.length,2);});
+ panel.backend.codexBackend={skills:async(action,values)=>({provider:'codex',groups:[],notice:'Restart Codex'})};panel.session={provider:'codex',cwd:'/x'};await panel.handle({type:'skills'});assert.equal(posts.at(-1).provider,'codex');assert.equal(runs.length,2);panel.session={provider:'kimi',cwd:'/kimi'};await panel.handle({type:'skills'});assert.equal(runs.at(-1).provider,'kimi');});
 test('Skills tab renders groups and sends a switch change',()=>{const vm=require('node:vm');const elements=new Map(),messages=[];let receive;
  const make=tag=>({tag,children:[],hidden:false,dataset:{},addEventListener(type,fn){this[type]=fn;},append(...nodes){this.children.push(...nodes);},replaceChildren(){this.children=[];},classList:{toggle(){}},setAttribute(name,value){this.attributes??={};this.attributes[name]=value;}});
  const el=id=>{if(!elements.has(id))elements.set(id,make('div'));return elements.get(id);};
  vm.runInNewContext(require('node:fs').readFileSync(path.join(__dirname,'../media/voice.js'),'utf8'),{acquireVsCodeApi:()=>({postMessage:m=>messages.push(m)}),document:{getElementById:el,createElement:make,querySelectorAll:()=>[]},window:{addEventListener:(type,fn)=>{receive=fn;}},Date});
  receive({data:{type:'skills',changed:false,groups:[{kind:'skills',label:'Personal',skills:[{name:'alpha',on:true,description:'A.'}]},{kind:'plugin',id:'demo@m',label:'Plugin · demo@m',on:false,skills:[{name:'p1'},{name:'p2'}]}]}});
- const [note,personal,plugin]=el('skills').children;assert.match(note.textContent,/this agent only/);
- const box=personal.children[1].children[0];assert.equal(box.checked,true);box.checked=false;box.change();assert.deepEqual({...messages.at(-1)},{type:'skillSet',kind:'skill',name:'alpha',on:false});
+ const [note,personal,plugin]=el('skills').children;assert.match(note.textContent,/this agent folder only/);
+ const box=personal.children[1].children[0];assert.equal(box.checked,true);box.checked=false;box.change();assert.deepEqual({...messages.at(-1)},{type:'skillSet',kind:'skill',name:'alpha',file:undefined,on:false});
  assert.equal(plugin.children[1].textContent,'p1, p2');const pbox=plugin.children[0].children[0];pbox.checked=true;pbox.change();assert.deepEqual({...messages.at(-1)},{type:'skillSet',kind:'plugin',name:'demo@m',on:true});
  receive({data:{type:'skills',unsupported:true}});assert.match(el('skills').children[0].textContent,/Claude sessions only/);});
+
+test('Codex folder overrides become native session arguments without changing global settings',async()=>{
+ const base=await fs.mkdtemp(path.join(os.tmpdir(),'agl-codex-skills-'));try{
+ const home=path.join(base,'home'),root=path.join(base,'seat'),other=path.join(base,'other');await fs.mkdir(root);await fs.mkdir(other);await fs.mkdir(home);
+ const file=path.join(root,process.platform==='win32'?"a 'quoted' skill":'a "quoted" skill','SKILL.md');await fs.mkdir(path.dirname(file));await fs.writeFile(file,'test');
+ const call=(action,extra={})=>engine.dispatch({action,root,...extra},home);
+ await call('skills-codex-set',{kind:'skill',name:'probe',file,on:false});
+ let prepared=await call('skills-codex-prepare');const toml=require('smol-toml');assert.deepEqual(JSON.parse(JSON.stringify(toml.parse(prepared.args[1]).skills.config)),[{path:file,enabled:false}]);
+ assert.deepEqual((await engine.dispatch({action:'skills-codex-prepare',root:other},home)).args,[]);
+ await call('skills-codex-set',{kind:'skill',name:'probe',file,on:true});assert.deepEqual(JSON.parse(JSON.stringify(toml.parse((await call('skills-codex-prepare')).args[1]).skills.config)),[{path:file,enabled:true}]);
+ await assert.rejects(fs.stat(path.join(home,'.codex','config.toml')),/ENOENT/);
+ await fs.writeFile(path.join(root,'.agl','codex-skills.json'),'{broken');await assert.rejects(call('skills-codex-prepare'),/Cannot read/);
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});
+
+test('Kimi folder switches filter a launch catalog, keep resources and leave other agents and sources unchanged',async()=>{
+ const base=await fs.mkdtemp(path.join(os.tmpdir(),'agl-kimi-skills-'));try{
+ const home=path.join(base,'home'),root=path.join(base,'seat'),other=path.join(base,'other');await fs.mkdir(root);await fs.mkdir(other);await fs.mkdir(home);
+ await skill(path.join(root,'.kimi-code','skills'),'probe');await skill(path.join(root,'.agents','skills'),'shared');await skill(path.join(home,'.agents','skills'),'personal');
+ await fs.writeFile(path.join(root,'.kimi-code','skills','probe','resource.txt'),'Resource');
+ const call=(action,extra={})=>engine.dispatch({action,provider:'kimi',root,...extra},home);
+ let listed=await call('skills-agent-list');const target=listed.groups.flatMap(g=>g.skills).find(s=>s.name==='probe');
+ await call('skills-agent-set',{kind:'skill',name:target.name,file:target.file,on:false});
+ let prepared=await call('skills-kimi-prepare');let folders=await fs.readdir(prepared.args[1]);assert.equal(folders.length,2);
+ for(const folder of folders)assert.doesNotMatch(await fs.readFile(path.join(prepared.args[1],folder,'SKILL.md'),'utf8'),/name: probe/);
+ assert.deepEqual((await engine.dispatch({action:'skills-kimi-prepare',root:other},home)).args,[]);
+ await call('skills-agent-set',{kind:'skill',name:target.name,file:target.file,on:true});prepared=await call('skills-kimi-prepare');folders=await fs.readdir(prepared.args[1]);assert.equal(folders.length,3);
+ const restored=[];for(const folder of folders)if((await fs.readFile(path.join(prepared.args[1],folder,'SKILL.md'),'utf8')).includes('name: probe'))restored.push(folder);
+ assert.equal(await fs.readFile(path.join(prepared.args[1],restored[0],'resource.txt'),'utf8'),'Resource');assert.equal(await fs.readFile(path.join(path.dirname(target.file),'resource.txt'),'utf8'),'Resource');
+ await assert.rejects(call('skills-agent-set',{kind:'skill',name:'probe',file:'/somewhere/else',on:false}),/cannot be switched/);
+ }finally{await fs.rm(base,{recursive:true,force:true});}
+});

@@ -160,7 +160,7 @@ The workspace and skill engines use Node APIs and Git argument arrays, without B
 ## Skills GUI
 
 Select the **Manage Skills** book icon in the main manager toolbar, or run **AGL Agent Manager: Manage Skills**.
-**AGL Skills** manages folder-based skills separately from workspace isolation. It groups workspace and personal sources for Claude, Codex/shared AGENTS skills, and legacy Codex locations on the selected local or SSH host.
+**AGL Skills** manages folder-based skills separately from workspace isolation. It groups workspace and personal sources for Claude, Codex/shared AGENTS skills, legacy Codex locations, and Kimi Code locations on the selected local or SSH host.
 
 - **New Skill** creates a SKILL.md from a name and description and opens it for editing.
 - **Import Skill Folder** copies a folder containing SKILL.md and its supporting files into the chosen source; existing skills are not overwritten.
@@ -172,7 +172,19 @@ Save or discard unsaved skill edits before disabling or removing a skill. Change
 
 ### Skills for one agent
 
-The **Skills** tab in a Claude session’s Voice pane lists the skills that agent can load: skills in its own folder, skills inherited from parent folders, personal skills and installed plugins. Switches apply to that agent only. They are saved as `skillOverrides` (skills) and `enabledPlugins` (plugins) in the agent folder’s `.claude/settings.local.json`, the same file Claude Code’s `/skills` menu writes; other settings in that file are kept. Plugins switch as a whole, because Claude Code has no per-folder switch for a single plugin skill. Restart the agent to apply a change. Codex sessions show the tab without switches.
+The **Skills** tab supports Claude, Codex and Kimi Code. Switches apply to all conversations in the selected agent folder. They do not change another agent folder or move personal skill sources.
+
+| Provider | How the switch is applied | When it takes effect |
+| --- | --- | --- |
+| Claude | Native `skillOverrides` and `enabledPlugins` in `.claude/settings.local.json`; other settings are kept | Claude reloads local settings. Restart if a change does not appear. Plugins may require reload/restart. |
+| Codex | Folder-local `.agl/codex-skills.json`, passed as native `skills.config` session overrides | Close and reopen the agent from AGL. Global Codex settings are kept. |
+| Kimi Code | Folder-local `.agl/kimi-skills.json` and a generated catalog passed with `--skills-dir` | Close and reopen the agent from AGL. Source folders and their resources are kept. |
+
+Codex's native catalog supplies its skill list, including system and plugin skills. Kimi switches cover project and personal directory skills; extra-directory skills and name collisions with extra-directory skills are read-only because Kimi loads those separately. Kimi's built-in and plugin skills remain managed by Kimi. Claude plugins switch as a whole.
+
+Closing and reopening means resuming the same conversation through AGL, without deleting it or switching permission modes. Skills already read can remain in conversation history; start a new conversation if those earlier instructions must leave the context. Starting a CLI manually outside AGL does not apply the Codex/Kimi folder switches.
+
+Native verification uses `scripts/audit-native-claude-skills.py`, `scripts/audit-native-codex-skills.py` and `scripts/audit-native-kimi-skills.py` on Linux with Python 3 and the corresponding CLI installed. Set `AGL_NODE` to the Node executable when needed. Each checks enabled, disabled and re-enabled discovery in disposable folders. Kimi's probe uses a local synthetic model endpoint and no production credential. No probe sends work to an existing agent.
 
 Source discovery follows [Codex skills](https://developers.openai.com/codex/skills) and [Claude skills](https://code.claude.com/docs/en/skills). Session instructions follow [Codex AGENTS.md](https://developers.openai.com/codex/guides/agents-md) and [Claude memory](https://code.claude.com/docs/en/memory).
 
