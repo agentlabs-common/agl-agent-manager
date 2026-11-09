@@ -60,3 +60,8 @@ test('the portal button beside Stop opens this agent on the agent portal',async(
  const html=module.exports.html('src','n','s','j');assert.ok(html.indexOf('id="stop"')<html.indexOf('id="portal"'),'portal button sits right after Stop');
  const panel=Object.create(module.exports.VoicePanel.prototype);panel.post=async()=>{};panel.session={cwd:path.join(root,'repo')};await panel.handle({type:'openStatus'});
  assert.deepEqual(JSON.parse(JSON.stringify(calls[0])),['claudeFolderAgents.openStatusPage',{agent:'claude',folder:'hrms-dev'}]);}finally{await fs.promises.rm(base,{recursive:true,force:true});}});
+test('a partial that arrives after dictation ended does not mark the button recording again',async()=>{const m={exports:{}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../voice-panel.js'),'utf8'),{module:m,require:n=>n==='vscode'?{workspace:{}}:n==='./live-client'?{LiveClient:class{}}:require(n),setInterval:()=>1,clearInterval(){},setTimeout,Set,Map});
+ const panel=Object.create(m.exports.VoicePanel.prototype);const posts=[];panel.post=async x=>posts.push(x);panel.session={};panel.terminal={sendText(){},exitStatus:undefined};panel.assertTarget=async()=>{};
+ let release;const slow=new Promise(r=>release=r);panel.backend={voice:async(op)=>op==='partial'?slow:op==='finish'?'':'idle'};
+ await panel.dictate();const poll=panel.pollDictation();await panel.cancelDictation();release('late words');await poll;
+ assert.equal(posts.filter(p=>p.type==='dictation').at(-1).state,'idle','the last dictation message must be idle');});
