@@ -27,7 +27,7 @@ def settings():
             key,value=parts[0].split('=',1)
             if key in result and not result[key]:result[key]=value
     except FileNotFoundError:pass
-    if not (result['GEMINI_API_KEY'] or result['GOOGLE_API_KEY']):raise RuntimeError('Set GEMINI_API_KEY or add it to ~/.config/agentlabs/keys.env.')
+    if not (result['GEMINI_API_KEY'] or result['GOOGLE_API_KEY']):raise RuntimeError('No Gemini API key. Run the command AGL Agent Manager: Configure Gemini Voice (or set GEMINI_API_KEY, or add it to ~/.config/agentlabs/keys.env).')
     return result
 
 def filler_only(text):
@@ -98,7 +98,8 @@ class Bridge:
         self.muted=False;self.external_speech=False;self.raw_text='';self.handled=set();self.force=False;self.force_at=0;self.pending_calls={};self.inflight={};self.transcript_at=0;self.last_voice=0;self.submitted_voice=-1;self.resume_handle=None;self.go_away=False;self.reconnecting=False;self.reconnects=0;self.held_text='';self.held_at=0;self.model_spoke=False;self.player=None;self.playing_until=0;self.audio_bytes=0
         self.model=options.model or self.config['GOOGLE_LIVE_MODEL'] or 'gemini-3.8-live'
     async def connect(self):
-        import websockets
+        try:import websockets
+        except ImportError:raise RuntimeError('Gemini Live needs the Python package websockets. Run: python3 -m venv ~/.venvs/tts && ~/.venvs/tts/bin/pip install websockets (or set AGL Agent Manager: Voice Python to a Python that has it).') from None
         header='additional_headers' if 'additional_headers' in inspect.signature(websockets.connect).parameters else 'extra_headers'
         key=self.config['GEMINI_API_KEY'] or self.config['GOOGLE_API_KEY']
         socket=await websockets.connect(ENDPOINT,**{header:{'x-goog-api-key':key}},max_size=16*1024*1024,open_timeout=15,ping_interval=20)

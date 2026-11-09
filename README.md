@@ -1,10 +1,21 @@
 # AGL Agent Manager
 
-A standalone VS Code extension for native Claude Code, Codex and Kimi Code sessions.
-It lists agents only inside the current workspace’s .sessions folders, including their repository worktrees.
-Agents started directly in the canonical workspace or elsewhere are excluded.
-Claude sessions use an orange icon, Codex sessions a green terminal icon, and Kimi sessions the Kimi icon.
-A dot (●) marks a session that needs you: a permission prompt or an agent waiting for your answer (warning colour), or a reply you have not looked at yet (blue). The count appears on the view. Opening the session clears its unread dot.
+**Run a team of AI coding agents from VS Code.** Claude Code, Codex and Kimi Code agents each get their own folder of git worktrees, appear together in one sidebar, and talk to each other and to you through a shared agent portal. You see at a glance who is working, who is idle and who needs you, and you can listen to replies or talk back by voice.
+
+- **One list for every agent.** Claude (orange), Codex (green) and Kimi agents, grouped into your **teams** and **Ephemeral** runs, each split into **Working**, **Idle** and **Stopped**. A dot (●) marks an agent that needs you: a permission prompt, a question, or a reply you have not read yet.
+- **Isolated workspaces.** Each agent works in its own `.sessions/<agent>/<name>` folder with its own branch and worktrees, so agents never edit the same checkout.
+- **Agent portal.** Every agent keeps a live status page, facts and proposals you can read and answer in the browser. Agents message each other only with your permission.
+- **Native terminals.** Opening an agent attaches its real CLI in a VS Code terminal. Stop, delete, hide or restart an agent in YOLO mode from the right-click menu.
+- **Voice.** Hear full replies read aloud with Gemini text-to-speech, and steer agents hands-free with Gemini Live.
+
+## Quick start
+
+1. Install at least one agent CLI: [Claude Code](https://code.claude.com), [Codex](https://developers.openai.com/codex) or Kimi Code.
+2. Install this extension and open a project folder (a trusted workspace).
+3. In the **AGL Agent Manager** view, press **+**, pick a provider and name the agent. It starts in its own session folder.
+4. Optional, for voice: run **AGL Agent Manager: Configure Gemini Voice** and paste a [Gemini API key](https://aistudio.google.com/apikey). The key is kept in VS Code's secret storage.
+
+Linux only for now. Voice also needs `arecord` and `aplay`; Gemini Live also needs a Python with the `websockets` package (see **Gemini Live** below).
 
 ## Install
 
@@ -16,19 +27,19 @@ Install **AGL Agent Manager** (publisher Agentlabs) from the Visual Studio Marke
 - one UserPromptSubmit hook in `~/.claude/settings.json`, and in `~/.kimi-code/config.toml` when Kimi is installed (a backup is written next to each file first).
 Agents use these to keep status pages and to message each other. The extension itself sends data only for voice: to Google Gemini (speech and Live) and, for Dictate, to Deepgram, each with your own API key. The agent CLIs you run talk to their own providers.
 
-Moving from a VSIX installed before 0.14.12 (ID `local-tools.claude-folder-agents`): uninstall that copy. Settings and teams carry over; hidden sessions and each window's list filter start fresh.
+Moving from an earlier VSIX (ID `local-tools.claude-folder-agents` or `Agentlabs.claude-folder-agents`): uninstall that copy. Settings and teams carry over; hidden sessions and each window's list filter start fresh.
 
 Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases/latest).
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.14.12.vsix**.
+2. Select **agl-agent-manager-0.14.12.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.14.12.vsix --force`
+`code --install-extension agl-agent-manager-0.14.12.vsix --force`
 
 ## Claude workspace trust
 
@@ -57,7 +68,7 @@ The microphone and Gemini key stay on the local VS Code computer. Codex history 
 
 ## Workspace sessions
 
-**AGL Agent Folders** uses the AgentLabs logo for each agent folder and creates isolated folders of repository worktrees. No companion skill is needed or installed for workspace isolation.
+**AGL Agent Folders** uses the AgentLabs logo for each agent folder and creates isolated folders of repository worktrees. Workspace isolation itself needs no skill; the `agl-notes` skill is for the agent portal.
 
 1. Open the workspace containing the canonical repository clones.
 2. Select **+** in **AGL Agent Manager** or **AGL Agent Folders**.
@@ -183,7 +194,7 @@ Click a reply in either tab to hear it with the selected Gemini TTS voice.
 Connection status, microphone controls, settings, playback controls, and the composer are grouped at the bottom.
 Action buttons use compact icons. Hover for a tooltip; each button also has an accessible label.
 
-**Dictate** is plain speech-to-text, the same Deepgram streamer as Herdr dictation (`~/.claude/hooks/stt-stream.py`, key in `~/.claude/hooks/tts.conf`). Press it to start; your words appear above the composer. Press it again to send the text to the agent. To throw it away instead, press **✕** next to it or Esc. It works with or without Gemini Live; a connected Live session pauses its microphone while you dictate. For Gemini-edited prompts that wait in the composer, choose **Review** in the Live delivery menu.
+**Dictate** (optional) is plain speech-to-text with Deepgram. It needs the separate agentlabs-voice speech tools (`~/.claude/hooks/stt-stream.py`, its Python environment in `~/.venvs/tts`, and a Deepgram key in `~/.claude/hooks/tts.conf`); without them the button explains what is missing. Press it to start; press it again to stop.
 Gemini turns your spoken thought into a lightly polished draft. Edit it and select **Send** when ready.
 In **Auto-send polished prompt** mode, complete spoken prompts go directly to the selected agent terminal.
 Typed prompts are sent as written. **Interrupt** sends Ctrl+C to the terminal.

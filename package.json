@@ -1,7 +1,31 @@
 {
-  "name": "claude-folder-agents",
+  "name": "agl-agent-manager",
   "displayName": "AGL Agent Manager",
-  "description": "Folder-scoped Claude, Codex and Kimi sessions with native terminals, Gemini voice control and full-reply TTS.",
+  "description": "Run a team of Claude Code, Codex and Kimi agents from VS Code: isolated worktree folders, one sidebar with teams, an agent portal for status and messages, and Gemini voice.",
+  "categories": [
+    "AI",
+    "Chat",
+    "Other"
+  ],
+  "keywords": [
+    "claude",
+    "claude code",
+    "codex",
+    "kimi",
+    "ai agents",
+    "multi-agent",
+    "agent team",
+    "coding agent",
+    "worktree",
+    "agent portal",
+    "voice",
+    "gemini"
+  ],
+  "galleryBanner": {
+    "color": "#1e1b4b",
+    "theme": "dark"
+  },
+  "qna": "https://github.com/agentlabs-common/agl-agent-manager/issues",
   "version": "0.14.12",
   "publisher": "Agentlabs",
   "license": "MIT",
@@ -9,9 +33,6 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": [
-    "Other"
-  ],
   "main": "./extension.js",
   "extensionKind": [
     "ui"

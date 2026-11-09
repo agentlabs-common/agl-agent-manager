@@ -38,7 +38,7 @@ async function configureGemini(vscode,context,voiceBackend){
   {label:'All extension settings',id:'all'}
  ],{title:'Gemini voice settings',placeHolder:'Choose what to configure'});
  if(!chosen)return;
- if(chosen.id==='all')return vscode.commands.executeCommand('workbench.action.openSettings','@ext:Agentlabs.claude-folder-agents');
+ if(chosen.id==='all')return vscode.commands.executeCommand('workbench.action.openSettings','@ext:Agentlabs.agl-agent-manager');
  if(chosen.id==='removeKey'){await context.secrets.delete(KEY);return vscode.window.showInformationMessage('Saved Gemini API key removed. Reconnect Live to use the fallback key.');}
  if(chosen.id==='key'){
   const value=await vscode.window.showInputBox({title:'Gemini API key',prompt:'Stored in VS Code secure storage on this computer. Reconnect Live after changing it.',password:true,ignoreFocusOut:true,validateInput:value=>value.trim()&&!/\s/.test(value.trim())?undefined:'Enter a non-empty API key without whitespace.'});
