@@ -70,7 +70,8 @@ def listing(cwd,managed_roots=None):
     out=[]
     for item in rows:
         actual=os.path.realpath(item.get('cwd',''))
-        if (not any(os.path.commonpath([actual,value])==value for value in allowed)) if allowed is not None else actual!=root:continue
+        # normcase: Windows compares paths without case and with either slash.
+        if (not any(os.path.normcase(os.path.commonpath([actual,value]))==os.path.normcase(value) for value in allowed)) if allowed is not None else os.path.normcase(actual)!=os.path.normcase(root):continue
         sid=item.get('sessionId','')
         if not UUID.fullmatch(sid):continue
         meta=metadata(sid)
