@@ -15,17 +15,19 @@ stop_record() {
 }
 case "$operation" in
  record)
+  # A recording always ends after CC_DICTATE_MAX_SECONDS (default 5 minutes), so one orphaned by a crashed window cannot keep the microphone.
   # Plain speech-to-text with the agentlabs-voice Deepgram streamer, the same one Herdr dictation uses.
   conf="${CC_TTS_CONF:-$HOME/.claude/hooks/tts.conf}"; [ ! -f "$conf" ] || . "$conf"
   venv="${CC_TTS_VENV:-$HOME/.venvs/tts}"; stt="$HOME/.claude/hooks/stt-stream.py"
-  [ ! -f "$dir/record.pid" ] || { echo 'Dictation is already recording.' >&2;exit 1; }
+  # A lock left by a recorder that has died (window closed, extension host gone) is cleaned up, not obeyed.
+  if [ -f "$dir/record.pid" ]; then if kill -0 "$(cat "$dir/record.pid")" 2>/dev/null; then echo 'Dictation is already recording.' >&2;exit 1; fi; stop_record; fi
   [ -n "${DEEPGRAM_API_KEY:-}${CC_STT_KEY:-}" ] || { echo 'Configure Deepgram in ~/.claude/hooks/tts.conf before dictating.' >&2;exit 1; }
   [ -x "$venv/bin/python" ] && [ -f "$stt" ] || { echo 'Install the agentlabs-voice speech tools (~/.claude/hooks/stt-stream.py) first.' >&2;exit 1; }
   command -v arecord >/dev/null || { echo 'Install arecord to use the microphone.' >&2;exit 1; }
   export DEEPGRAM_API_KEY CC_STT_KEY CC_STT_LANG CC_STT_ONLINE_MODEL CC_STT_KEYTERM_FILE CC_STT_HOST
   : > "$dir/live.txt"; : > "$dir/final.txt"; rm -f "$dir/audio.fifo"; mkfifo "$dir/audio.fifo"
   setsid "$venv/bin/python" "$stt" --live "$dir/live.txt" < "$dir/audio.fifo" > "$dir/final.txt" 2> "$dir/record.err" & echo $! > "$dir/client.pid"
-  setsid arecord -q -f S16_LE -r 16000 -c 1 > "$dir/audio.fifo" 2>> "$dir/record.err" < /dev/null & echo $! > "$dir/record.pid" ;;
+  setsid arecord -q -d "${CC_DICTATE_MAX_SECONDS:-300}" -f S16_LE -r 16000 -c 1 > "$dir/audio.fifo" 2>> "$dir/record.err" < /dev/null & echo $! > "$dir/record.pid" ;;
  partial) cat "$dir/live.txt" 2>/dev/null || true ;;
  finish) stop_record; tr '\n' ' ' < "$dir/final.txt" ;;
  cancel) stop_record; : > "$dir/live.txt" ;;
