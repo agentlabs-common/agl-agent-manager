@@ -2,7 +2,7 @@
   "name": "claude-folder-agents",
   "displayName": "AGL Agent Manager",
   "description": "Folder-scoped Claude, Codex and Kimi sessions with native terminals, Gemini voice control and full-reply TTS.",
-  "version": "0.14.11",
+  "version": "0.14.12",
   "publisher": "Agentlabs",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -216,7 +216,7 @@
       },
       {
         "command": "claudeFolderAgents.about",
-        "title": "Version 0.14.11",
+        "title": "Version 0.14.12",
         "category": "AGL Agent Manager"
       },
       {
