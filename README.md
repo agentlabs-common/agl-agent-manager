@@ -1,5 +1,7 @@
 # AGL Agent Manager
 
+![Your agents. One command center. — AGL Agent Manager](https://raw.githubusercontent.com/agentlabs-common/agl-agent-manager/v0.14.17/media/pitch-hero.png)
+
 **Run a team of AI coding agents from VS Code.** Claude Code, Codex and Kimi Code agents each get their own folder of git worktrees, appear together in one sidebar, and talk to each other and to you through a shared agent portal. You see at a glance who is working, who is idle and who needs you, and you can listen to replies or talk back by voice.
 
 - **One list for every agent.** Claude (orange), Codex (green) and Kimi agents, grouped into your **teams** and **Ephemeral** runs, each split into **Working**, **Idle** and **Stopped**. A dot (●) marks an agent that needs you: a permission prompt, a question, or a reply you have not read yet.
@@ -7,6 +9,29 @@
 - **Agent portal.** Every agent keeps a live status page, facts and proposals you can read and answer in the browser. Agents message each other only with your permission.
 - **Native terminals.** Opening an agent attaches its real CLI in a VS Code terminal. Stop, delete, hide or restart an agent in YOLO mode from the right-click menu.
 - **Voice.** Hear full replies read aloud with Gemini text-to-speech, and steer agents hands-free with Gemini Live.
+
+## The full workflow
+
+![AGL Agent Manager feature overview: providers, teams, worktrees, terminals, portal, reviews, messaging, voice, dictation, skills, session controls and SSH](https://raw.githubusercontent.com/agentlabs-common/agl-agent-manager/v0.14.17/media/pitch-features.png)
+
+*The two pitch images are promotional artwork generated with Google Nano Banana Pro. The screenshots below show the actual interfaces with sample data.*
+
+| Feature | What you get |
+| --- | --- |
+| Claude Code, Codex and Kimi | Multiple agent providers in one sidebar |
+| Named teams and Ephemeral runs | Working, Idle and Stopped groups; explicit list filters |
+| Isolated worktrees | A managed folder, branch and repository worktrees for each task |
+| Native terminals | Open and resume the agent’s real command-line session |
+| Agent portal | Read status, responsibility, facts and proposals |
+| Reviews and decisions | Ask questions, save comments and record approvals |
+| Permissioned agent messaging | Choose which agents may contact each other |
+| Gemini Live | Speak naturally to your agent on Linux |
+| Dictation and reply readout | Dictate prompts and hear published replies on Linux |
+| Skills management | Manage reusable instructions for your agents |
+| Session controls | Resume, stop, hide, delete and restart in YOLO mode |
+| Remote SSH | Work with Claude and Codex on remote hosts |
+
+The core extension supports Linux, macOS and Windows. Voice is Linux-only. Kimi live-state detection requires Linux; Kimi SSH is not supported.
 
 ## Screenshots
 

@@ -2,6 +2,10 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.14.17 (2026-11-09)
+
+Adds a Nano Banana Pro promotional hero and a complete feature-overview image to the Marketplace presentation, plus an accessible text feature table. The artwork is labelled as promotional, separate from actual product screenshots. Platform and provider limitations are explicit. Includes the generic agent discovery and team visibility fixes from 0.14.16.
+
 ## 0.14.16 (2026-11-09)
 
 Managed agents now default to All, independently of the legacy showSaved setting, so stopped team members remain visible. Explicit sidebar filters are preserved. Claude, Codex and Kimi results appear as each provider responds instead of waiting for the slowest provider. Failed refreshes retain the last list with a warning. Explicit team members are no longer suppressed as older transcript copies. Existing conversation IDs and team membership are preserved.
