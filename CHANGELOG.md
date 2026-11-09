@@ -2,6 +2,16 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.15.0 (2026-11-09) — local test release
+
+- Adds GitHub Copilot CLI as a local provider: native sessions and terminals, history/readout, teams, portal pages and native user skill switches.
+- Allowed portal messages can wake a stopped Copilot agent in the same conversation. Hold, contact withdrawal, cooldown, backoff and duplicate-start locks apply. No YOLO or allow-all flags are added to a wake; ambiguous activity stays queued.
+- Adds agent-folder skill switches for Codex and Kimi alongside Claude. Close and reopen Codex/Kimi through AGL after changes. Copilot switches currently affect the account.
+- Fixes Interrupt, closed-terminal sends, Refresh, rich Status summaries, failed skill-toggle recovery, Stop dispatch and attached-provider Skills routing. Unsupported voice controls are disabled outside Linux.
+- Copilot SSH, agent-folder-only Copilot skills and detailed native activity/permission badges remain follow-up work. Voice still requires Linux. See the Copilot assessment for verification limits.
+
+This build is for local testing before Marketplace publication.
+
 ## 0.14.17 (2026-11-09)
 
 Adds a Nano Banana Pro promotional hero and a complete feature-overview image to the Marketplace presentation, plus an accessible text feature table. The artwork is labelled as promotional, separate from actual product screenshots. Platform and provider limitations are explicit. Includes the generic agent discovery and team visibility fixes from 0.14.16.
