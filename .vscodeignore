@@ -16,3 +16,5 @@ openui/node_modules/**
 openui/src/**
 openui/package*.json
 .github/**
+
+test-results.log

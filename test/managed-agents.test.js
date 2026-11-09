@@ -1,2 +1,15 @@
 const{test}=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs/promises');const os=require('node:os');const path=require('node:path');const{ManagedAgents}=require('../managed-agents');
 test('agent discovery excludes canonical workspace agents and prefix lookalikes while retaining nested session agents',async()=>{const root=await fs.mkdtemp(path.join(os.tmpdir(),'agl-managed-'));try{const sessionRoot=path.join(root,'.sessions/claude/task-id');await fs.mkdir(sessionRoot,{recursive:true});await fs.writeFile(path.join(sessionRoot,'.agl-session.json'),JSON.stringify({version:1,workspaceRoot:root,sessionRoot,agent:'claude',folder:'task-id',name:'Task',branch:'claude/task-id',createdAt:new Date().toISOString(),repositories:[{name:'repo',branch:'claude/task-id',canonicalPath:path.join(root,'repo'),worktreePath:path.join(sessionRoot,'repo')}]}));const requests=[];const backend=scope=>({scope,sshPath:'ssh',sshConfigFile:'',run:async(file,args,options)=>require('../backend').execute(process.execPath,['-'],options),warnings:[],sessionsUnder:async roots=>{requests.push(roots);return[{key:'outside',cwd:root},{key:'canonical',cwd:path.join(root,'repo')},{key:'prefix',cwd:sessionRoot+'-other'},{key:'claude',cwd:sessionRoot,provider:'claude'},{key:'codex',cwd:path.join(sessionRoot,'repo/src'),provider:'codex'}];}});const manager=new ManagedAgents({backend});const result=await manager.list({cwd:root,host:'remote'});assert.deepEqual(result.agents.map(row=>row.key),['claude','codex']);assert.equal(result.agents[1].scope.cwd,path.join(sessionRoot,'repo/src'));assert.equal(result.agents[1].scope.host,'remote');assert.deepEqual(requests[0],[sessionRoot]);assert.equal(await manager.sessionFor({cwd:root}),undefined);assert.equal((await manager.sessionFor({cwd:sessionRoot})).name,'Task');}finally{await fs.rm(root,{recursive:true,force:true});}});
+
+test('an explicitly assigned team member is not hidden as an older transcript copy',async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'agl-team-copy-'));
+ try{
+  const seat=path.join(root,'.sessions/claude/lead');await fs.mkdir(seat,{recursive:true});
+  await fs.writeFile(path.join(seat,'.agl-session.json'),JSON.stringify({version:1,workspaceRoot:root,sessionRoot:seat,agent:'claude',folder:'lead',name:'Lead',branch:'claude/lead',createdAt:new Date().toISOString(),repositories:[]}));
+  await fs.writeFile(path.join(root,'.sessions/teams.json'),JSON.stringify({teams:[{id:'team',name:'My team',members:['assigned']}]}));
+  const backend=scope=>({scope,warnings:[],sessionsUnder:async()=>[{sessionId:'assigned',key:'assigned',cwd:seat,olderCopy:true},{sessionId:'copy',key:'copy',cwd:seat,olderCopy:true}]});
+  const result=await new ManagedAgents({backend}).list({cwd:root});
+  assert.equal(result.agents[0].teamId,'team');assert.equal(result.agents[0].olderCopy,false);
+  assert.equal(result.agents[1].teamId,undefined);assert.equal(result.agents[1].olderCopy,true);
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+});
