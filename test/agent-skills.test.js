@@ -44,7 +44,7 @@ test('Skills tab renders groups and sends a switch change',()=>{const vm=require
 test('Codex folder overrides become native session arguments without changing global settings',async()=>{
  const base=await fs.mkdtemp(path.join(os.tmpdir(),'agl-codex-skills-'));try{
  const home=path.join(base,'home'),root=path.join(base,'seat'),other=path.join(base,'other');await fs.mkdir(root);await fs.mkdir(other);await fs.mkdir(home);
- const file=path.join(root,'a "quoted" skill','SKILL.md');await fs.mkdir(path.dirname(file));await fs.writeFile(file,'test');
+ const file=path.join(root,process.platform==='win32'?"a 'quoted' skill":'a "quoted" skill','SKILL.md');await fs.mkdir(path.dirname(file));await fs.writeFile(file,'test');
  const call=(action,extra={})=>engine.dispatch({action,root,...extra},home);
  await call('skills-codex-set',{kind:'skill',name:'probe',file,on:false});
  let prepared=await call('skills-codex-prepare');const toml=require('smol-toml');assert.deepEqual(JSON.parse(JSON.stringify(toml.parse(prepared.args[1]).skills.config)),[{path:file,enabled:false}]);
