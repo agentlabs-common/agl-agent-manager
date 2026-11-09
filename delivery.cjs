@@ -45,6 +45,17 @@ async function registerHook(home, command) {
   return 'added';
 }
 
+// Kimi Code runs [[hooks]] from ~/.kimi-code/config.toml; for UserPromptSubmit it adds plain stdout to the prompt (it drops
+// Claude's hookSpecificOutput.additionalContext), so the same check runs with --plain. Only when Kimi is installed.
+async function registerKimiHook(home, command) {
+  try { await fs.access(path.join(home, '.kimi-code')); } catch { return 'no kimi'; }
+  const file = path.join(home, '.kimi-code', 'config.toml'); const text = (await read(file)) || '';
+  if (text.includes('agl-skill-check.cjs')) return 'present';
+  if (text) await fs.writeFile(file + '.agl-backup', text);
+  await writeAtomic(file, text + (text && !text.endsWith('\n') ? '\n' : '') + '\n# Added by AGL Agent Manager: tells Kimi about unread agent messages and agl-notes updates at each prompt.\n[[hooks]]\nevent = "UserPromptSubmit"\ncommand = ' + JSON.stringify(command + ' --plain') + '\n');
+  return 'added';
+}
+
 async function deliver({ home, extensionPath, version, portalUrl = '', workspaceRoot = '' }) {
   const tools = path.join(home, '.config', 'agentlabs', 'agl');
   const skillsDir = path.join(extensionPath, 'skills'); const skills = {};
@@ -54,12 +65,13 @@ async function deliver({ home, extensionPath, version, portalUrl = '', workspace
   }
   for (const tool of TOOLS) { const from = path.join(extensionPath, 'scripts', tool); const text = await read(from); if (text !== undefined && (await read(path.join(tools, tool))) !== text) await writeAtomic(path.join(tools, tool), text); }
   const hook = await registerHook(home, 'node ' + path.join(tools, 'agl-skill-check.cjs'));
+  const kimiHook = await registerKimiHook(home, 'node ' + path.join(tools, 'agl-skill-check.cjs'));
   // One portal per VS Code window: agents find theirs under the workspace that holds their session folder.
   let portals = {}; try { portals = JSON.parse(await read(path.join(tools, 'agent-portal.json')) || '{}').portals || {}; } catch {}
   if (workspaceRoot && portalUrl) portals[workspaceRoot] = portalUrl;
   const info = { app: 'agent-portal', version, portalUrl, portals, formats: FORMATS, skills, tools: { migrate: path.join(tools, 'agl-migrate.cjs') }, migrations: MIGRATIONS, updated: new Date().toISOString() };
   await writeAtomic(path.join(tools, 'agent-portal.json'), JSON.stringify(info, null, 2) + '\n');
-  return { hook, info };
+  return { hook, kimiHook, info };
 }
 
-module.exports = { deliver, installSkillFolder, registerHook, MIGRATIONS };
+module.exports = { deliver, installSkillFolder, registerHook, registerKimiHook, MIGRATIONS };

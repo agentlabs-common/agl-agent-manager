@@ -76,3 +76,12 @@ test('the version file keeps one portal address per workspace', async () => tmp(
   const info = JSON.parse(await fs.readFile(path.join(home, '.config', 'agentlabs', 'agl', 'agent-portal.json'), 'utf8'));
   assert.deepEqual(info.portals, { '/w/one': 'http://127.0.0.1:1/a/', '/w/two': 'http://127.0.0.1:2/b/' });
 }));
+test('Kimi gets the prompt hook once in config.toml, with --plain, and only when Kimi is installed', async () => tmp(async (home) => {
+  const fs = require('node:fs/promises'); const path = require('node:path'); const { registerKimiHook } = require('../delivery.cjs');
+  assert.equal(await registerKimiHook(home, 'node /x/agl-skill-check.cjs'), 'no kimi');
+  await fs.mkdir(path.join(home, '.kimi-code')); await fs.writeFile(path.join(home, '.kimi-code', 'config.toml'), 'default_model = "k2"');
+  assert.equal(await registerKimiHook(home, 'node /x/agl-skill-check.cjs'), 'added');
+  assert.equal(await registerKimiHook(home, 'node /x/agl-skill-check.cjs'), 'present');
+  const text = await fs.readFile(path.join(home, '.kimi-code', 'config.toml'), 'utf8');
+  assert.match(text, /^default_model = "k2"\n\n# Added by AGL Agent Manager[^\n]*\n\[\[hooks\]\]\nevent = "UserPromptSubmit"\ncommand = "node \/x\/agl-skill-check.cjs --plain"\n$/);
+}));

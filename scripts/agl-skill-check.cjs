@@ -35,7 +35,8 @@ if (require.main === module) {
   let input = ''; process.stdin.on('data', (c) => { input += c; }).on('end', () => {
     let cwd = process.cwd(); try { cwd = JSON.parse(input).cwd || cwd; } catch {}
     let note = ''; try { note = check(cwd); } catch {}
-    if (note) process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: note } }));
+    // --plain: Kimi Code adds a hook's plain stdout to the prompt; Claude Code takes the JSON form.
+    if (note) process.stdout.write(process.argv.includes('--plain') ? note + '\n' : JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: note } }));
     process.exit(0);
   });
 }
