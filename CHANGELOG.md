@@ -2,6 +2,10 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.14.16 (2026-11-09)
+
+Managed agents now default to All, independently of the legacy showSaved setting, so stopped team members remain visible. Explicit sidebar filters are preserved. Claude, Codex and Kimi results appear as each provider responds instead of waiting for the slowest provider. Failed refreshes retain the last list with a warning. Explicit team members are no longer suppressed as older transcript copies. Existing conversation IDs and team membership are preserved.
+
 ## 0.14.15 (2026-11-09)
 
 **Linux, macOS and Windows.** The automated tests now run on all three systems. On Windows the Python helpers use the `py` launcher (or `python`), Codex installed as `codex.cmd` starts correctly, CLIs are found under `%APPDATA%\npm`, and session folders are compared without regard to case or slash style. Stopping a Claude agent works without Linux's `/proc` on macOS and Windows. Voice stays Linux-only for now; the README has a **Platforms** table. The extension ID stays `Agentlabs.claude-folder-agents`.

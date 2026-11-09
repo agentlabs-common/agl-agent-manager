@@ -8,6 +8,35 @@
 - **Native terminals.** Opening an agent attaches its real CLI in a VS Code terminal. Stop, delete, hide or restart an agent in YOLO mode from the right-click menu.
 - **Voice.** Hear full replies read aloud with Gemini text-to-speech, and steer agents hands-free with Gemini Live.
 
+## Screenshots
+
+These screenshots show the actual product interfaces with sample agents and sample conversations. They contain no private workspace data.
+
+### Team overview in the agent portal
+
+See who is working, who finished, and who needs your attention.
+
+![Agent portal with sample agents grouped by status](https://raw.githubusercontent.com/agentlabs-common/agl-agent-manager/v0.14.16/media/screenshots/agent-portal.png)
+
+### Review status and decisions
+
+Read each agent’s progress, inspect evidence, and approve or comment on proposed work.
+
+![Sample agent status page with a rollout question and milestone table](https://raw.githubusercontent.com/agentlabs-common/agl-agent-manager/v0.14.16/media/screenshots/review-and-status.png)
+
+### Replies and voice controls
+
+Read full replies and compose the next prompt. Voice controls require your own API keys and currently support Linux.
+The screenshot uses the extension’s voice renderer with a sample message bridge; Gemini is disconnected.
+
+![Voice pane showing a sample conversation and prompt controls](https://raw.githubusercontent.com/agentlabs-common/agl-agent-manager/v0.14.16/media/screenshots/voice-and-replies.png)
+
+## What changed in 0.14.16
+
+Stopped managed agents remain visible by default. Existing team members stay assigned when a newer transcript copy exists.
+Agent providers populate the list independently, and a failed refresh keeps the previous list visible with a warning.
+Explicit sidebar filters remain respected. Select **All** to include stopped agents.
+
 ## Quick start
 
 1. Install at least one agent CLI: [Claude Code](https://code.claude.com), [Codex](https://developers.openai.com/codex) or Kimi Code.

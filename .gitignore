@@ -7,3 +7,7 @@ preview.html
 .env
 .env.*
 openui/node_modules/
+
+test-results.log
+
+.listing-demo/

@@ -16,3 +16,10 @@ openui/node_modules/**
 openui/src/**
 openui/package*.json
 .github/**
+
+test-results.log
+
+.listing-demo/**
+
+node_modules/playwright/**
+node_modules/playwright-core/**
