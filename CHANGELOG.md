@@ -2,6 +2,10 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.15.5 (2026-11-13)
+
+- Kimi and Antigravity remember YOLO: a conversation created or restarted in YOLO reopens in YOLO (before, reopening from the list dropped the flag).
+
 ## 0.15.4 (2026-11-13)
 
 - **Portal messages wake Kimi and Antigravity agents**, like Claude and Copilot: the seat's own conversation is resumed and given the messages as data (no YOLO; permission requests are declined), and they are marked read once the agent answers.
