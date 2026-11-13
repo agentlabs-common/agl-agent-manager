@@ -100,13 +100,13 @@ Download the latest VSIX from [GitHub Releases](https://github.com/agentlabs-com
 For Remote SSH, install the VSIX locally in VS Code. Voice playback runs on the local computer.
 
 1. In VS Code, open **Extensions → … → Install from VSIX…**.
-2. Select **claude-folder-agents-0.15.3.vsix**.
+2. Select **claude-folder-agents-0.15.4.vsix**.
 3. Run **Developer: Reload Window**.
 4. Expand **AGL Agent Manager** in Explorer.
 
 Terminal alternative:
 
-`code --install-extension claude-folder-agents-0.15.3.vsix --force`
+`code --install-extension claude-folder-agents-0.15.4.vsix --force`
 
 ## Claude workspace trust
 
@@ -373,7 +373,7 @@ The packaged extension includes the ws WebSocket transport dependency.
 
 Antigravity agents run the Antigravity CLI (`agy`, set its path with **AGL Agent Manager: Antigravity Path**). Create one with **+ → Antigravity** or **New Antigravity Session** (YOLO adds `--dangerously-skip-permissions`). Opening a row resumes the same conversation with `agy --conversation <id>`; the voice pane reads replies from Antigravity's own transcript.
 
-The list comes from Antigravity's ACP server. A session shows as running while its `agy` holds its presence lock (Linux and macOS). Antigravity has no way to delete a conversation yet, so **Delete Session** says so and leaves it; use **Hide Session** instead. Skills: Antigravity reads the shared `.agents/skills` folder and `~/.gemini/config/skills`, where the extension also installs `agl-notes`. Unread agent messages and skill updates reach it through a SessionStart and PreInvocation hook, injected once per change.
+The list comes from Antigravity's ACP server. A session shows as running while its `agy` holds its presence lock (Linux and macOS). Antigravity has no way to delete a conversation yet, so **Delete Session** says so and leaves it; use **Hide Session** instead. Skills: Antigravity reads the shared `.agents/skills` folder and `~/.gemini/config/skills`, where the extension also installs `agl-notes`. Unread agent messages and skill updates reach it through a SessionStart and PreInvocation hook, injected once per change, and a portal message wakes a stopped Antigravity (or Kimi) agent in its own conversation.
 
 ## GitHub Copilot CLI preview
 

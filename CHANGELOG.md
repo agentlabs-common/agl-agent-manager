@@ -2,6 +2,11 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.15.4 (2026-11-13)
+
+- **Portal messages wake Kimi and Antigravity agents**, like Claude and Copilot: the seat's own conversation is resumed and given the messages as data (no YOLO; permission requests are declined), and they are marked read once the agent answers.
+- A new Antigravity session now shows in the list and opens before its first message (Antigravity only listed it after one).
+
 ## 0.15.3 (2026-11-13)
 
 - Antigravity: a second message from the same sender now reaches the agent (the hook had kept the identical note as already sent).
