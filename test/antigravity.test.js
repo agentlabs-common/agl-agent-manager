@@ -26,3 +26,11 @@ test('a never-prompted Antigravity conversation linked to its seat is listed and
  const b=new AntigravityBackend({scope:{cwd:root},agy:'/x/agy'});b.list=async()=>[];b.liveIds=async()=>new Set();
  const rows=await b.sessionsUnder([root]);assert.deepEqual(rows.map(r=>[r.sessionId.slice(0,8),r.cwd,r.name]),[['33333333',root,'tester']]);
  const p=await b.prepare({sessionId:'33333333-2222-3333-4444-555555555555'});assert.deepEqual(p.argv,['/x/agy','--conversation','33333333-2222-3333-4444-555555555555']);}finally{fs.rmSync(root,{recursive:true,force:true});}});
+test('YOLO is remembered on the seat: a conversation started or restarted in YOLO reopens in YOLO; rebinding keeps it',async()=>{const engine=require('../workspace-engine.cjs');const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'agl-yolo-')));try{
+ const seat=path.join(root,'.sessions','antigravity','t');fs.mkdirSync(seat,{recursive:true});const sid='55555555-2222-3333-4444-555555555555';
+ fs.writeFileSync(path.join(seat,'.agl-session.json'),JSON.stringify({version:1,baseBranch:'main',workspaceRoot:root,sessionRoot:seat,agent:'antigravity',name:'t',folder:'t',branch:'antigravity/t',createdAt:'2026-11-13T00:00:00.000Z',repositories:[]}));
+ const b=new AntigravityBackend({scope:{cwd:seat},agy:'/x/agy'});b.list=async()=>[];b.liveIds=async()=>new Set();
+ await engine.dispatch({action:'bind',root,agent:'antigravity',folder:'t',provider:'antigravity',sessionId:sid});assert.deepEqual((await b.prepare({sessionId:sid})).argv,['/x/agy','--conversation',sid]);
+ await b.rememberYolo(sid,seat);assert.deepEqual((await b.prepare({sessionId:sid})).argv,['/x/agy','--conversation',sid,'--dangerously-skip-permissions']);
+ await engine.dispatch({action:'bind',root,agent:'antigravity',folder:'t',provider:'antigravity',sessionId:sid});assert.equal(JSON.parse(fs.readFileSync(path.join(seat,'.agl-session.json'),'utf8')).conversations[0].yolo,true,'rebinding without yolo keeps it');
+ }finally{fs.rmSync(root,{recursive:true,force:true});}});

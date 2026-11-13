@@ -7,7 +7,7 @@ function parseStep(line,history){let e;try{e=JSON.parse(line);}catch{return;}if(
  if(body)history.items.set(id+':reply',{id:id+':reply',ts,text:body,speechText:summaries.length?summaries.join(' '):e.content.replace(VOICE,''),turn:id,source:'early',hasVoice:!!summaries.length});}
 // Antigravity CLI (agy) speaks the same ACP as Kimi: list, new, load, close (no delete). A running agy holds a flock on presence/<id>.lock.
 class AntigravityBackend extends KimiBackend{
- constructor(options={}){super(options);this.kimi=options.agy&&options.agy!=='agy'?options.agy:findCli('agy');this.label='Antigravity';this.exeName='agy';this.home=options.agyHome||path.join(os.homedir(),'.gemini','antigravity-cli');}
+ constructor(options={}){super(options);this.kimi=options.agy&&options.agy!=='agy'?options.agy:findCli('agy');this.label='Antigravity';this.provider='antigravity';this.exeName='agy';this.home=options.agyHome||path.join(os.homedir(),'.gemini','antigravity-cli');}
  validId(sid){if(!ID.test(sid||''))throw new Error('Invalid Antigravity session ID.');}
  parse(line,history){parseStep(line,history);}
  async list(){try{return((await this.acp('session/list',{cwd:this.scope.cwd})).sessions||[]).filter(s=>ID.test(s?.sessionId||''));}catch(error){if(/Required program not found/.test(error.message))return[];throw error;}}
