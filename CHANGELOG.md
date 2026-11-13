@@ -2,6 +2,11 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.15.3 (2026-11-13)
+
+- Antigravity: a second message from the same sender now reaches the agent (the hook had kept the identical note as already sent).
+- Antigravity: Stop ends exactly the `agy` holding the session's lock, never the extension's own `agy acp` helper.
+
 ## 0.15.2 (2026-11-13)
 
 - **Antigravity** (`agy`) joins as a provider: list, open and resume the same conversation, new sessions (also YOLO), running state, stop, restart in YOLO, read-aloud from its transcript, teams and portal pages. Unread agent messages and agl-notes updates reach it through a SessionStart/PreInvocation hook in `~/.gemini/config/hooks.json`, injected once per change; `agl-notes` is installed in `~/.gemini/config/skills`. Antigravity cannot delete conversations yet, so Delete says so.
