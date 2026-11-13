@@ -32,11 +32,13 @@ function check(cwd, home = os.homedir()) {
 }
 
 function agyOutput(note, payload = {}, home = os.homedir()) {
-  if (!note) return {};
   const conv = payload.conversationId || ''; const seenFile = path.join(home, '.config', 'agentlabs', 'agl', '.agy-seen.json');
   let seen = {}; try { seen = JSON.parse(read(seenFile) || '{}'); } catch {}
+  const save = () => { try { fs.mkdirSync(path.dirname(seenFile), { recursive: true }); fs.writeFileSync(seenFile, JSON.stringify(seen)); } catch {} };
+  // An empty inbox forgets the last note, so a later message with the same wording (same sender) is injected again; it also keeps the file small.
+  if (!note) { if (conv && conv in seen) { delete seen[conv]; save(); } return {}; }
   if (payload.hookEventName !== 'SessionStart' && conv && seen[conv] === note) return {};
-  if (conv) { seen[conv] = note; try { fs.mkdirSync(path.dirname(seenFile), { recursive: true }); fs.writeFileSync(seenFile, JSON.stringify(seen)); } catch {} }
+  if (conv) { seen[conv] = note; save(); }
   return { injectSteps: [{ systemMessage: { systemMessage: note } }] };
 }
 
