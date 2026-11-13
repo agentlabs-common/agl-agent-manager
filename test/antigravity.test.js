@@ -21,3 +21,8 @@ test('agy hook registration: only with ~/.gemini/config, once, keeps other hooks
 test('agy hook: after the inbox empties, a message worded like the last one is injected again',()=>{const home=fs.mkdtempSync(path.join(os.tmpdir(),'agl-agy2-'));try{const p={conversationId:'c9',hookEventName:'PreInvocation'};const note='AGL: 1 new message from claude/hrms-lead.';
  assert.ok(agyOutput(note,p,home).injectSteps);assert.deepEqual(agyOutput(note,p,home),{});assert.deepEqual(agyOutput('',p,home),{});assert.ok(agyOutput(note,p,home).injectSteps,'second message with the same wording');
  assert.deepEqual(agyOutput('',p,home),{});assert.deepEqual(JSON.parse(fs.readFileSync(path.join(home,'.config','agentlabs','agl','.agy-seen.json'),'utf8')),{});}finally{fs.rmSync(home,{recursive:true,force:true});}});
+test('a never-prompted Antigravity conversation linked to its seat is listed and can be opened',async()=>{const root=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'agl-agyseat-')));try{
+ fs.writeFileSync(path.join(root,'.agl-session.json'),JSON.stringify({name:'tester',conversations:[{provider:'antigravity',sessionId:'33333333-2222-3333-4444-555555555555'},{provider:'claude',sessionId:'44444444-2222-3333-4444-555555555555'}]}));
+ const b=new AntigravityBackend({scope:{cwd:root},agy:'/x/agy'});b.list=async()=>[];b.liveIds=async()=>new Set();
+ const rows=await b.sessionsUnder([root]);assert.deepEqual(rows.map(r=>[r.sessionId.slice(0,8),r.cwd,r.name]),[['33333333',root,'tester']]);
+ const p=await b.prepare({sessionId:'33333333-2222-3333-4444-555555555555'});assert.deepEqual(p.argv,['/x/agy','--conversation','33333333-2222-3333-4444-555555555555']);}finally{fs.rmSync(root,{recursive:true,force:true});}});
