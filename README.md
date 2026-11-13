@@ -2,9 +2,9 @@
 
 ![Your agents. One command center. — AGL Agent Manager](https://raw.githubusercontent.com/agentlabs-common/agl-agent-manager/v0.14.17/media/pitch-hero.png)
 
-**Run a team of AI coding agents from VS Code.** Claude Code, Codex, Kimi and GitHub Copilot CLI Code agents each get their own folder of git worktrees, appear together in one sidebar, and talk to each other and to you through a shared agent portal. You see at a glance who is working, who is idle and who needs you, and you can listen to replies or talk back by voice.
+**Run a team of AI coding agents from VS Code.** Claude Code, Codex, Kimi, GitHub Copilot CLI and Antigravity agents each get their own folder of git worktrees, appear together in one sidebar, and talk to each other and to you through a shared agent portal. You see at a glance who is working, who is idle and who needs you, and you can listen to replies or talk back by voice.
 
-- **One list for every agent.** Claude (orange), Codex (green) and Kimi agents, grouped into your **teams** and **Ephemeral** runs, each split into **Working**, **Idle** and **Stopped**. A dot (●) marks an agent that needs you: a permission prompt, a question, or a reply you have not read yet.
+- **One list for every agent.** Claude, Codex, Kimi, Copilot and Antigravity agents, each with its own icon,, grouped into your **teams** and **Ephemeral** runs, each split into **Working**, **Idle** and **Stopped**. A dot (●) marks an agent that needs you: a permission prompt, a question, or a reply you have not read yet.
 - **Isolated workspaces.** Each agent works in its own `.sessions/<agent>/<name>` folder with its own branch and worktrees, so agents never edit the same checkout.
 - **Agent portal.** Every agent keeps a live status page, facts and proposals you can read and answer in the browser. Agents message each other only with your permission.
 - **Native terminals.** Opening an agent attaches its real CLI in a VS Code terminal. Stop, delete, hide or restart an agent in YOLO mode from the right-click menu.
@@ -18,7 +18,7 @@
 
 | Feature | What you get |
 | --- | --- |
-| Claude Code, Codex and Kimi | Multiple agent providers in one sidebar |
+| Claude Code, Codex, Kimi, Copilot and Antigravity | Multiple agent providers in one sidebar |
 | Named teams and Ephemeral runs | Working, Idle and Stopped groups; explicit list filters |
 | Isolated worktrees | A managed folder, branch and repository worktrees for each task |
 | Native terminals | Open and resume the agent’s real command-line session |
@@ -64,7 +64,7 @@ Explicit sidebar filters remain respected. Select **All** to include stopped age
 
 ## Quick start
 
-1. Install at least one agent CLI: [Claude Code](https://code.claude.com), [Codex](https://developers.openai.com/codex) or Kimi Code.
+1. Install at least one agent CLI: [Claude Code](https://code.claude.com), [Codex](https://developers.openai.com/codex), Kimi Code, GitHub Copilot CLI or Antigravity (`agy`).
 2. Install this extension and open a project folder (a trusted workspace).
 3. In the **AGL Agent Manager** view, press **+**, pick a provider and name the agent. It starts in its own session folder.
 4. Optional, for voice: run **AGL Agent Manager: Configure Gemini Voice** and paste a [Gemini API key](https://aistudio.google.com/apikey). The key is kept in VS Code's secret storage.
@@ -79,6 +79,7 @@ Needs Python 3 (`python3`; on Windows the `py` launcher or `python`) and git. Ge
 | Agent portal, status pages, agent messaging | yes | yes | yes |
 | Stop, delete, restart in YOLO | yes | yes | yes |
 | Kimi running state | yes | sessions listed, not live state | sessions listed, not live state |
+| Antigravity running state | yes | yes | sessions listed, not live state |
 | Voice: read aloud, Gemini Live, Dictate | yes | not yet | not yet |
 
 The automated tests run on all three systems for every change. Day-to-day use has been on Linux; please [report](https://github.com/agentlabs-common/agl-agent-manager/issues) anything that misbehaves on macOS or Windows. The prompt hooks call `node`, so Node.js should be on your PATH for unread-message notes in Claude and Kimi.
@@ -90,7 +91,7 @@ Install **AGL Agent Manager** (publisher Agentlabs) from the Visual Studio Marke
 **What it changes outside VS Code.** On activation it installs and keeps current, in your home folder:
 - the `agl-notes` skill in `~/.claude/skills` and `~/.agents/skills` (a skill you wrote with the same name is never replaced);
 - the agent portal tools in `~/.config/agentlabs/agl` (`agl-talk`, the status keeper, the prompt hook script);
-- one UserPromptSubmit hook in `~/.claude/settings.json`, and in `~/.kimi-code/config.toml` when Kimi is installed (a backup is written next to each file first).
+- one UserPromptSubmit hook in `~/.claude/settings.json`, and in `~/.kimi-code/config.toml` when Kimi is installed, and a SessionStart/PreInvocation hook in `~/.gemini/config/hooks.json` when Antigravity is installed (a backup is written next to each file first).
 Agents use these to keep status pages and to message each other. The extension itself sends data only for voice: to Google Gemini (speech and Live) and, for Dictate, to Deepgram, each with your own API key. The agent CLIs you run talk to their own providers.
 
 Moving from a VSIX installed before 0.14.12 (ID `local-tools.claude-folder-agents`) or from a 0.14.13–0.14.14 test build (ID `Agentlabs.agl-agent-manager`): uninstall that copy. Settings and teams carry over; hidden sessions and each window's list filter start fresh.
@@ -115,7 +116,7 @@ Ordinary session subfolders inherit parent trust. Nested Git repositories and so
 
 ## Codex sessions
 
-Claude, Codex and Kimi appear together in **AGL Agent Manager**, limited to managed .sessions folders and their descendants.
+Every provider appears together in **AGL Agent Manager**, limited to managed .sessions folders and their descendants.
 **Providers** in extension settings can show either provider alone. A missing provider does not hide sessions from the other one.
 
 Open a Codex row to launch `codex resume <thread-id>` with the shared Gemini voice pane. Repeated clicks reuse the terminal.
@@ -367,6 +368,12 @@ Open this directory in VS Code and press **F5**.
 `npm run test:host` loads the extension in an isolated VS Code window (requires Xvfb).
 `npm run package` builds the VSIX.
 The packaged extension includes the ws WebSocket transport dependency.
+
+## Antigravity sessions
+
+Antigravity agents run the Antigravity CLI (`agy`, set its path with **AGL Agent Manager: Antigravity Path**). Create one with **+ → Antigravity** or **New Antigravity Session** (YOLO adds `--dangerously-skip-permissions`). Opening a row resumes the same conversation with `agy --conversation <id>`; the voice pane reads replies from Antigravity's own transcript.
+
+The list comes from Antigravity's ACP server. A session shows as running while its `agy` holds its presence lock (Linux and macOS). Antigravity has no way to delete a conversation yet, so **Delete Session** says so and leaves it; use **Hide Session** instead. Skills: Antigravity reads the shared `.agents/skills` folder and `~/.gemini/config/skills`, where the extension also installs `agl-notes`. Unread agent messages and skill updates reach it through a SessionStart and PreInvocation hook, injected once per change.
 
 ## GitHub Copilot CLI preview
 

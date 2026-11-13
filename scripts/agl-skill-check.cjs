@@ -31,13 +31,25 @@ function check(cwd, home = os.homedir()) {
     'When done, write ' + installed + ' to .agl/.skill-version so this note stops.', ...(extras ? [extras] : [])].join('\n');
 }
 
+function agyOutput(note, payload = {}, home = os.homedir()) {
+  if (!note) return {};
+  const conv = payload.conversationId || ''; const seenFile = path.join(home, '.config', 'agentlabs', 'agl', '.agy-seen.json');
+  let seen = {}; try { seen = JSON.parse(read(seenFile) || '{}'); } catch {}
+  if (payload.hookEventName !== 'SessionStart' && conv && seen[conv] === note) return {};
+  if (conv) { seen[conv] = note; try { fs.mkdirSync(path.dirname(seenFile), { recursive: true }); fs.writeFileSync(seenFile, JSON.stringify(seen)); } catch {} }
+  return { injectSteps: [{ systemMessage: { systemMessage: note } }] };
+}
+
 if (require.main === module) {
   let input = ''; process.stdin.on('data', (c) => { input += c; }).on('end', () => {
-    let cwd = process.cwd(); try { cwd = JSON.parse(input).cwd || cwd; } catch {}
+    let cwd = process.cwd(), payload = {}; try { payload = JSON.parse(input); cwd = payload.cwd || payload.workspacePaths?.[0] || cwd; } catch {}
     let note = ''; try { note = check(cwd); } catch {}
     // --plain: Kimi Code adds a hook's plain stdout to the prompt; Claude Code takes the JSON form.
+    // --agy: Antigravity runs PreInvocation before every model call, so a note is injected only when it differs from the last
+    // one this conversation saw (SessionStart always). Its output is a system-message step.
+    if (process.argv.includes('--agy')) { process.stdout.write(JSON.stringify(agyOutput(note, payload))); process.exit(0); }
     if (note) process.stdout.write(process.argv.includes('--plain') ? note + '\n' : JSON.stringify({ hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: note } }));
     process.exit(0);
   });
 }
-module.exports = { check, newer };
+module.exports = { agyOutput, check, newer };

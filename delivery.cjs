@@ -56,22 +56,38 @@ async function registerKimiHook(home, command) {
   return 'added';
 }
 
+// Antigravity (agy) reads ~/.gemini/config/hooks.json: named hooks, each mapping events to command handlers. PreInvocation runs
+// before every model call and SessionStart once; both inject a system message. Only when agy's config folder exists.
+async function registerAgyHook(home, command) {
+  const dir = path.join(home, '.gemini', 'config'); try { await fs.access(dir); } catch { return 'no antigravity'; }
+  const file = path.join(dir, 'hooks.json'); const text = await read(file);
+  let hooks = {}; if (text !== undefined) { try { hooks = JSON.parse(text.replace(/^\uFEFF/, '')); } catch { return 'hooks.json is not valid JSON; hook not added'; } }
+  if (JSON.stringify(hooks).includes('agl-skill-check.cjs')) return 'present';
+  const handler = { type: 'command', command: command + ' --agy', timeout: 10 };
+  hooks['agl-agent-manager'] = { SessionStart: [handler], PreInvocation: [handler] };
+  if (text !== undefined) await fs.writeFile(file + '.agl-backup', text);
+  await writeAtomic(file, JSON.stringify(hooks, null, 2) + '\n');
+  return 'added';
+}
+
 async function deliver({ home, extensionPath, version, portalUrl = '', workspaceRoot = '' }) {
   const tools = path.join(home, '.config', 'agentlabs', 'agl');
   const skillsDir = path.join(extensionPath, 'skills'); const skills = {};
   for (const name of await fs.readdir(skillsDir).catch(() => [])) {
-    for (const parent of [path.join(home, '.claude', 'skills'), path.join(home, '.agents', 'skills')]) await installSkillFolder(path.join(skillsDir, name), path.join(parent, name), version);
+    const agyConfig = path.join(home, '.gemini', 'config'); const agy = await fs.access(agyConfig).then(() => true, () => false);
+    for (const parent of [path.join(home, '.claude', 'skills'), path.join(home, '.agents', 'skills'), ...(agy ? [path.join(agyConfig, 'skills')] : [])]) await installSkillFolder(path.join(skillsDir, name), path.join(parent, name), version);
     skills[name] = version;
   }
   for (const tool of TOOLS) { const from = path.join(extensionPath, 'scripts', tool); const text = await read(from); if (text !== undefined && (await read(path.join(tools, tool))) !== text) await writeAtomic(path.join(tools, tool), text); }
   const hook = await registerHook(home, 'node ' + path.join(tools, 'agl-skill-check.cjs'));
   const kimiHook = await registerKimiHook(home, 'node ' + path.join(tools, 'agl-skill-check.cjs'));
+  const agyHook = await registerAgyHook(home, 'node ' + path.join(tools, 'agl-skill-check.cjs'));
   // One portal per VS Code window: agents find theirs under the workspace that holds their session folder.
   let portals = {}; try { portals = JSON.parse(await read(path.join(tools, 'agent-portal.json')) || '{}').portals || {}; } catch {}
   if (workspaceRoot && portalUrl) portals[workspaceRoot] = portalUrl;
   const info = { app: 'agent-portal', version, portalUrl, portals, formats: FORMATS, skills, tools: { migrate: path.join(tools, 'agl-migrate.cjs') }, migrations: MIGRATIONS, updated: new Date().toISOString() };
   await writeAtomic(path.join(tools, 'agent-portal.json'), JSON.stringify(info, null, 2) + '\n');
-  return { hook, kimiHook, info };
+  return { hook, kimiHook, agyHook, info };
 }
 
-module.exports = { deliver, installSkillFolder, registerHook, registerKimiHook, MIGRATIONS };
+module.exports = { deliver, installSkillFolder, registerHook, registerKimiHook, registerAgyHook, MIGRATIONS };

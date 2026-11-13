@@ -1,7 +1,7 @@
-const{Backend}=require('./backend');const{CodexBackend}=require('./codex-backend');const{KimiBackend}=require('./kimi-backend');const{CopilotBackend}=require('./copilot-backend');const LABELS={claude:'Claude',codex:'Codex',kimi:'Kimi',copilot:'Copilot'};
+const{Backend}=require('./backend');const{CodexBackend}=require('./codex-backend');const{KimiBackend}=require('./kimi-backend');const{CopilotBackend}=require('./copilot-backend');const{AntigravityBackend}=require('./antigravity-backend');const{LABELS}=require('./agents');
 class SessionBackend extends Backend{
- constructor(options={}){super(options);this.providers=options.providers||['claude','codex','kimi','copilot'];this.claudeBackend=new Backend(options);this.codexBackend=new CodexBackend(options);this.kimiBackend=new KimiBackend(options);this.copilotBackend=new CopilotBackend(options);this.warnings=[];}
- forSession(session){if(!session.provider||session.provider==='claude')return this.claudeBackend;if(session.provider==='codex')return this.codexBackend;if(session.provider==='kimi')return this.kimiBackend;if(session.provider==='copilot')return this.copilotBackend;throw new Error('Unsupported agent provider.');}
+ constructor(options={}){super(options);this.providers=options.providers||Object.keys(LABELS);this.claudeBackend=new Backend(options);this.codexBackend=new CodexBackend(options);this.kimiBackend=new KimiBackend(options);this.copilotBackend=new CopilotBackend(options);this.antigravityBackend=new AntigravityBackend(options);this.warnings=[];}
+ forSession(session){const backend=this[(session.provider||'claude')+'Backend'];if(!backend||!Object.hasOwn(LABELS,session.provider||'claude'))throw new Error('Unsupported agent provider.');return backend;}
  async sessionsUnder(roots,links=[],onUpdate){return this.collect('sessionsUnder',roots,links,onUpdate);}
  async sessions(){return this.collect('sessions');}
  async collect(method,...args){
@@ -27,4 +27,4 @@ class SessionBackend extends Backend{
  async start(name,yolo=this.yolo,provider='claude'){const prepared=await this.forSession({provider}).start(name,yolo);return{...prepared,session:{...prepared.session,provider}};}
  dispose(){this.codexBackend.dispose();this.copilotBackend.dispose();}
 }
-module.exports={SessionBackend};
+module.exports={SessionBackend,LABELS};

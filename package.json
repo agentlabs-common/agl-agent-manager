@@ -1,7 +1,7 @@
 {
   "name": "claude-folder-agents",
   "displayName": "AGL Agent Manager",
-  "description": "Run a team of Claude Code, Codex and Kimi agents from VS Code: isolated worktree folders, one sidebar with teams, an agent portal for status and messages, and Gemini voice.",
+  "description": "Run a team of Claude Code, Codex, Kimi, Copilot and Antigravity agents from VS Code: isolated worktree folders, one sidebar with teams, an agent portal for status and messages, and Gemini voice.",
   "categories": [
     "AI",
     "Chat",
@@ -135,7 +135,7 @@
       },
       {
         "command": "claudeFolderAgents.deleteSession",
-        "title": "Delete Session\u2026",
+        "title": "Delete Session…",
         "category": "AGL Agent Manager",
         "icon": "$(trash)"
       },
@@ -171,7 +171,7 @@
       },
       {
         "command": "claudeFolderAgents.removeWorkspace",
-        "title": "Remove Agent Folder\u2026",
+        "title": "Remove Agent Folder…",
         "category": "AGL Agent Manager",
         "icon": "$(trash)"
       },
@@ -189,7 +189,7 @@
       },
       {
         "command": "claudeFolderAgents.removeSkill",
-        "title": "Remove Skill\u2026",
+        "title": "Remove Skill…",
         "category": "AGL Agent Manager",
         "icon": "$(trash)"
       },
@@ -242,7 +242,7 @@
       },
       {
         "command": "claudeFolderAgents.addToTeam",
-        "title": "Add to Team\u2026",
+        "title": "Add to Team…",
         "category": "AGL Agent Manager",
         "icon": "$(organization)"
       },
@@ -278,6 +278,26 @@
       {
         "command": "claudeFolderAgents.newCopilotYolo",
         "title": "New Copilot Session (YOLO)",
+        "category": "AGL Agent Manager"
+      },
+      {
+        "command": "claudeFolderAgents.newKimi",
+        "title": "New Kimi Session",
+        "category": "AGL Agent Manager"
+      },
+      {
+        "command": "claudeFolderAgents.newKimiYolo",
+        "title": "New Kimi Session (YOLO)",
+        "category": "AGL Agent Manager"
+      },
+      {
+        "command": "claudeFolderAgents.newAntigravity",
+        "title": "New Antigravity Session",
+        "category": "AGL Agent Manager"
+      },
+      {
+        "command": "claudeFolderAgents.newAntigravityYolo",
+        "title": "New Antigravity Session (YOLO)",
         "category": "AGL Agent Manager"
       }
     ],
@@ -558,7 +578,8 @@
               "claude",
               "codex",
               "kimi",
-              "copilot"
+              "copilot",
+              "antigravity"
             ]
           },
           "uniqueItems": true,
@@ -567,7 +588,8 @@
             "claude",
             "codex",
             "kimi",
-            "copilot"
+            "copilot",
+            "antigravity"
           ],
           "description": "Agent providers to show for the selected working directory."
         },
@@ -600,6 +622,11 @@
           "type": "string",
           "default": "copilot",
           "description": "Path to GitHub Copilot CLI. Copilot sessions currently support local workspaces."
+        },
+        "claudeFolderAgents.antigravityPath": {
+          "type": "string",
+          "default": "agy",
+          "description": "Path to the Antigravity CLI (agy). Antigravity sessions currently support local workspaces."
         }
       }
     }

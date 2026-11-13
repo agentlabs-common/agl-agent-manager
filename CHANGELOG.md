@@ -2,6 +2,12 @@
 
 All releases are on [GitHub Releases](https://github.com/agentlabs-common/agl-agent-manager/releases), each with its VSIX.
 
+## 0.15.2 (2026-11-13)
+
+- **Antigravity** (`agy`) joins as a provider: list, open and resume the same conversation, new sessions (also YOLO), running state, stop, restart in YOLO, read-aloud from its transcript, teams and portal pages. Unread agent messages and agl-notes updates reach it through a SessionStart/PreInvocation hook in `~/.gemini/config/hooks.json`, injected once per change; `agl-notes` is installed in `~/.gemini/config/skills`. Antigravity cannot delete conversations yet, so Delete says so.
+- **One provider list** (`agents.js`) now drives every label, picker, icon and terminal title, so all agents look alike. **New Kimi Session** and **New Antigravity Session** commands join Codex and Copilot's.
+- Tests no longer run delivery against the real home folder (it could reset `~/.config/agentlabs/agl/agent-portal.json` to a test address).
+
 ## 0.15.1 (2026-11-09) — local test release
 
 The voice pane now uses the session name in its title, header, reply labels, live captions and composer controls for every provider. Copilot no longer falls back to Claude. Name changes refresh labels even when the reply text is unchanged. The sidebar uses GitHub's Copilot Octicon, with separate light/dark colors and its MIT attribution.
